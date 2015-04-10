@@ -1,0 +1,6 @@
+/home/artyom/proj/ATS-playground/DATS/vector.dats: 2476(line=120, offs=1) -- 2502(line=120, offs=27): error(1): the file [../SATS/vec.sats] is not available for staloading.
+/home/artyom/proj/ATS-playground/DATS/vector.dats: 2905(line=138, offs=1) -- 2932(line=138, offs=28): error(1): the file [./SHARE/vec.hats] is not available for inclusion.
+/home/artyom/proj/ATS-playground/DATS/vector.dats: 5624(line=251, offs=1) -- 5650(line=251, offs=27): error(1): the file [../SATS/vec.sats] is not available for staloading.
+/home/artyom/proj/ATS-playground/DATS/vector.dats: 6053(line=269, offs=1) -- 6080(line=269, offs=28): error(1): the file [./SHARE/vec.hats] is not available for inclusion.
+patsopt(TRANS1): there are [4] errors in total.
+exit(ATS): uncaught exception: _2home_2artyom_2proj_2ATS_2dPostiats_2src_2pats_error_2esats__FatalErrorExn(1025)

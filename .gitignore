@@ -1,0 +1,30 @@
+# object files
+*.o
+*.obj
+*.elf
+
+# libraries
+*.lib
+*.a
+*.la
+*.lo
+
+# shared libs
+*.dll
+*.so
+*.so.*
+
+# binaries
+*.exe
+*.out
+*.i*86
+*.x86_64
+*.hex
+
+# emacs stuff
+*~
+.#*
+
+# ats specifics
+*_dats.c
+*_sats.c
