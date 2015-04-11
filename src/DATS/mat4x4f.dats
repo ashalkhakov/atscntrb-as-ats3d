@@ -317,44 +317,49 @@ in
 end // end of [mat4x4f_of_mat3x3f]
 
 implement
-mat4x4f_perspective (fovy, aspect, znear, zfar, handedness) = let
+mat4x4f_perspective (fovx, aspect, znear, zfar) = let
 //
+// fovx = M_PI/4, aspect=screen.width/screen.height
+// http://unspecified.wordpress.com/2012/06/21/calculating-the-gluperspective-matrix-and-other-opengl-matrix-maths/
+val _0 = gnumber_int<T>(0)
+val _1 = gnumber_int<T>(1)
 val _2 = gnumber_int<T>(2)
 //
-val y = div (_1, tan<T>(div (fovy, _2)))
-val x = div (y, aspect)
-val zdist = mul (sub (znear, zfar), handedness)
-val zfar_per_zdist = div (zfar, zdist)
+val h = div (_1, tan<T>(div (fovx, _2)))
+val w = div (h, aspect)
+val zdist = znear - zfar
 //
 var res: mat
 //
 val () =
-  res.init (
-    x, _0, _0, _0,
-    _0, y, _0, _0,
-    _0, _0, zfar_per_zdist, mul (neg (_1), handedness),
-    _0, _0, mul (znear, mul (zfar_per_zdist, handedness)), _0
-  )
+res.init (
+  w, _0, _0, _0,
+  _0, h, _0, _0,
+  _0, _0, div (add (zfar, znear), zdist), neg (_1),
+  _0, _0, div (mul (_2, mul (znear, zfar)), zdist), _0
+)
 //
 in
   res
 end // end of [mat4x4f_perspective]
 
 implement
-mat4x4f_ortho (lft, rgt, bot, top, znear, zfar) = let
+mat4x4f_ortho (w, h, znear, zfar) = let
 //
+val _0 = gnumber_int<T>(0)
+val _1 = gnumber_int<T>(1)
 val _2 = gnumber_int<T>(2)
 //
 var res: mat
 //
+// http://unspecified.wordpress.com/2012/06/21/calculating-the-gluperspective-matrix-and-other-opengl-matrix-maths/
 val () =
-  res.init (
-    div (_2, sub (rgt, lft)), _0, _0, _0,
-    _0, div (_2, sub (top, bot)), _0, _0,
-    _0, _0, div (neg (_2), sub (zfar, znear)), _0,
-    div (neg (add (rgt, lft)), sub (rgt, lft)), div (neg (add (top, bot)), sub (top, bot)),
-    div (neg (add (zfar, znear)), sub (zfar, znear)), _1
-  )
+res.init (
+  div (_2,  w), _0, _0, _0,
+  _0, div (_2, h), _0, _0,
+  _0, _0, div (neg (_2), sub (zfar, znear)), _0,
+  _0, _0, div (add (znear, zfar), sub (znear, zfar)), _1
+)
 //
 in
   res

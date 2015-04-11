@@ -271,8 +271,8 @@ mat4x4f_of_scale (&vec3f): mat4x4f
 fun
 mat4x4f_of_mat3x3f (&mat3x3f): mat4x4f
 fun
-mat4x4f_perspective (fovy: float, aspect: float, znear: float, zfar: float, handedness: float): mat4x4f
+mat4x4f_perspective (fovx: float, aspect: float, znear: float, zfar: float): mat4x4f
 fun
-mat4x4f_ortho (left: float, right: float, bot: float, top: float, znear: float, zfar: float): mat4x4f
+mat4x4f_ortho (width: float, height: float, znear: float, zfar: float): mat4x4f
 fun
 mat4x4f_look_at (at: &vec3f, eye: &vec3f, up: &vec3f): mat4x4f
