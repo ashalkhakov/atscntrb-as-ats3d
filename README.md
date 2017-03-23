@@ -1,10 +1,35 @@
-What is it?
+# ATS3D
 
-ATS3D is a library and application framework for real-time graphics
-programming with the ATS2 programming language.
+ATS3D is a low-dimensional vector algebra library for
+[ATS2](http://www.ats-lang.org/).
 
-License: 3-clause BSD (see the LICENSE file)
+## Features
 
-[More info about ATS2](http://www.ats-lang.org/)
+* 2- 3- and 4-dimensional vectors
+* 3x3- and 4x4-dimensional matrices
+* function templates for iterating over components of a vector
+
+## Usage examples
+
+Working with 3D vectors:
+
+```
+var a : vec3f
+val () = a.init (~1.0f)
+var b : vec3f
+val () = b.init (1.0f, 0.0f, 0.0f)
+val () = println!("a.x = ", a.x())
+var c = a + b
+val () = println!("c = ", c)
+
+```
+
+## Running tests
+
+Simply run `make` in `src/TEST`.
+
+## License
+
+Distributed under the 3-clause BSD (see the LICENSE file)
 
 --Artyom Shalkhakov
