@@ -1,8 +1,8 @@
 #include
 "share/atspre_staload.hats"
 
-staload "libc/SATS/math.sats" // NOTE: requires -lm during compilation
-staload _ = "libc/DATS/math.dats"
+staload "libats/libc/SATS/math.sats" // NOTE: requires -lm during compilation
+staload _ = "libats/libc/DATS/math.dats"
 
 staload "../SATS/vector.sats"
 staload _ = "../DATS/vec3f.dats"

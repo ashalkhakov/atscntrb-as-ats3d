@@ -1,5 +1,13 @@
 (* ****** ****** *)
 
+%{#
+
+#include "../CATS/vector.cats"
+
+%}
+
+(* ****** ****** *)
+
 //
 viewdef
 iso_v_vt (V:view, VT:vt@ype) =
@@ -10,20 +18,6 @@ make_iso_v_vt {V:view} {VT:vt@ype} (): iso_v_vt (V, VT)
 //
 
 (* ****** ****** *)
-
-%{^
-
-#ifndef ATS_VEC2F_DEFINED
-#define ATS_VEC2F_DEFINED
-
-typedef
-struct {
-  float V[2];
-} vec2f_t;
-
-#endif /* ATS_VEC2F_DEFINED */
-
-%}
 
 typedef
 vector_2_float_t0ype =
@@ -116,20 +110,6 @@ overload .x with vec2f_set_x
 overload .y with vec2f_set_y
 
 (* ****** ****** *)
-
-%{^
-
-#ifndef ATS_VEC3F_DEFINED
-#define ATS_VEC3F_DEFINED
-
-typedef
-struct {
-  float V[3];
-} vec3f_t;
-
-#endif /* ATS_VEC3F_DEFINED */
-
-%}
 
 typedef
 vector_3_float_t0ype =
@@ -233,22 +213,6 @@ overload .y with vec3f_set_y of 10
 overload .z with vec3f_set_z of 10
 
 (* ****** ****** *)
-
-%{^
-
-#ifndef ATS_VEC4F_DEFINED
-#define ATS_VEC4F_DEFINED
-
-typedef
-struct {
-  float V[4];
-}
-/* __attribute__((__aligned__(16))) */
-vec4f_t;
-
-#endif /* ATS_VEC4F_DEFINED */
-
-%}
 
 typedef
 vector_4_float_t0ype =

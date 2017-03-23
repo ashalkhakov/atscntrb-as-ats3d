@@ -445,7 +445,7 @@ vec_init$fwork<VT> (i, env) = res where {
   var j: int = 0
   var res: T = gnumber_int<T>(0)
   val () =
-    while* {j:nat | j < NROW} .<NROW-j>. (j: int j) =>
+    while* {j:nat | j <= NROW} .<NROW-j>. (j: int j) =>
       (j < NROW) {
       val () = res := gadd_val_val<T> (res, gmul_val_val<T> (m.M.[j].V.[i], v.V.[j]))
       val () = j := j + 1

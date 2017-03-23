@@ -12,8 +12,8 @@ staload _ = "prelude/DATS/gnumber.dats"
 staload _ = "prelude/DATS/SHARE/gnumber_float.dats"
 staload _ = "prelude/DATS/gorder.dats"
 
-staload "libc/SATS/math.sats" // NOTE: requires -lm during compilation
-staload _ = "libc/DATS/math.dats"
+staload "libats/libc/SATS/math.sats" // NOTE: requires -lm during compilation
+staload _ = "libats/libc/DATS/math.dats"
 
 staload "libats/SATS/typeval.sats"
 staload _ = "libats/DATS/typeval.dats"

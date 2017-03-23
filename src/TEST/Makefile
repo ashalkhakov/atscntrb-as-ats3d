@@ -34,7 +34,7 @@ SOURCES_DATS += \
   ../DATS/mat3x3f.dats \
   ../DATS/mat4x4f.dats \
   ../DATS/quaternion.dats \
-  test01.dats \
+  test01.dats
 
 ######
 

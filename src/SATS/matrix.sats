@@ -1,24 +1,18 @@
 staload "./vector.sats"
 
+%{#
+
+#include "../CATS/vector.cats"
+#include "../CATS/matrix.cats"
+
+%}
+
 // threshold of determinant when it is considered too small
 // for the matrix inverse to be calculated
 fun{a:t@ype}
 gdet_treshold (): a
 
 (* ****** ****** *)
-
-%{^
-
-#ifndef ATS_MAT3X3F_DEFINED
-#define ATS_MAT3X3F_DEFINED
-
-typedef
-struct {
-  vec3f_t M[3];
-} mat3x3f_t;
-
-#endif /* ATS_MAT3X3F_DEFINED */
-%}
 
 typedef
 matrix_3_3_float_t0ype =
@@ -147,19 +141,6 @@ mat3x3f_rotation_z_rad (float): mat3x3f
 
 (* ****** ****** *)
 
-%{^
-
-#ifndef ATS_MAT4X4F_DEFINED
-#define ATS_MAT4X4F_DEFINED
-
-typedef
-struct {
-  vec4f_t M[4];
-} mat4x4f_t;
-
-#endif /* ATS_MAT4X4F_DEFINED */
-%}
-
 typedef
 matrix_4_4_float_t0ype =
 $extype_struct "mat4x4f_t" of {
@@ -274,5 +255,7 @@ fun
 mat4x4f_perspective (fovx: float, aspect: float, znear: float, zfar: float): mat4x4f
 fun
 mat4x4f_ortho (width: float, height: float, znear: float, zfar: float): mat4x4f
+fun
+mat4x4f_view (origin: &vec3f, forward: &vec3f, right: &vec3f, up: &vec3f): mat4x4f
 fun
 mat4x4f_look_at (at: &vec3f, eye: &vec3f, up: &vec3f): mat4x4f
