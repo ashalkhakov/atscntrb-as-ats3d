@@ -18,4 +18,11 @@ struct {
 /* __attribute__((__aligned__(16))) */
 vec4f_t;
 
+/* ****** ****** */
+
+typedef
+struct {
+  int V[3];
+} vec3i_t;
+
 #endif // ifndef ATS3D_CATS_VECTOR

@@ -317,5 +317,107 @@ overload .y with vec4f_set_y
 overload .z with vec4f_set_z
 overload .w with vec4f_set_w
 
+(* ****** ****** *)
+
+typedef
+vector_3_int_t0ype =
+$extype_struct "vec3i_t" of {
+  V= @[int][3]
+}
+
+stadef vec3i = vector_3_int_t0ype // local shorthand
+//
+fun{vt:vt@ype}
+vec3i_init$fwork (natLt(3), &(vt)): int
+//
+fun{a:t@ype}{env:vt@ype}
+vec3i_fold$fwork (&a >> a, natLt(3), &(env) >> _): void
+//
+fun{vt:vt@ype}
+vec3i_init_env (
+  vec: &vec3i? >> _, env: &(vt)
+): void // end of [vec3i_init_env]
+//
+fun{a:t@ype}{env:vt@ype}
+vec3i_fold_env  (
+  res: &a >> a
+, env: &(env) >> _
+): void // end of [vec3i_fold_env]
+//
+fun add_vec3i_vec3i (&vec3i, &vec3i): vec3i
+fun mul_int_vec3i (int, &vec3i): vec3i
+fun neg_vec3i (&vec3i): vec3i
+fun sub_vec3i_vec3i (&vec3i, &vec3i): vec3i
+fun length_sq_vec3i (&vec3i): int
+fun length_vec3i (&vec3i): int
+fun normalize_vec3i (&vec3i): vec3i
+fun dotprod_vec3i_vec3i (&vec3i, &vec3i): int
+fun lerp_vec3i_vec3i_int (&vec3i, &vec3i, int): vec3i
+fun{}
+equal_vec3i$eps (): int
+fun
+equal_vec3i_vec3i (&vec3i, &vec3i): bool
+fun
+fprint_vec3i (FILEref, &vec3i): void
+fun
+print_vec3i (&vec3i): void
+
+//
+overload + with add_vec3i_vec3i of 10
+overload * with mul_int_vec3i of 10
+overload ~ with neg_vec3i of 10
+overload - with sub_vec3i_vec3i of 10
+overload .length_sq with length_sq_vec3i of 10
+overload .length with length_vec3i of 10
+overload .normalize with normalize_vec3i of 10
+overload dotprod with dotprod_vec3i_vec3i of 10
+overload lerp with lerp_vec3i_vec3i_int of 10
+overload = with equal_vec3i_vec3i of 10
+overload fprint with fprint_vec3i of 10
+overload print with print_vec3i of 10
+//
+
+fun
+crossprod_vec3i_vec3i (&vec3i, &vec3i): vec3i
+
+overload crossprod with crossprod_vec3i_vec3i
+
+fun
+vec3i_init1 (&vec3i? >> _, int): void
+overload .init with vec3i_init1 of 10
+
+fun
+vec3i_init3 (&vec3i? >> _, int, int, int): void
+overload .init with vec3i_init3 of 10
+
+fun
+vec3i_get_int (&vec3i, natLt(3)): int
+fun
+vec3i_set_int (&vec3i, natLt(3), int): void
+
+overload [] with vec3i_get_int of 10
+overload [] with vec3i_set_int of 10
+
+fun
+vec3i_get_x (&vec3i): int
+fun
+vec3i_get_y (&vec3i): int
+fun
+vec3i_get_z (&vec3i): int
+
+overload .x with vec3i_get_x of 10
+overload .y with vec3i_get_y of 10
+overload .z with vec3i_get_z of 10
+
+fun
+vec3i_set_x (&vec3i, int): void
+fun
+vec3i_set_y (&vec3i, int): void
+fun
+vec3i_set_z (&vec3i, int): void
+
+overload .x with vec3i_set_x of 10
+overload .y with vec3i_set_y of 10
+overload .z with vec3i_set_z of 10
 
 (* ****** ****** *)
