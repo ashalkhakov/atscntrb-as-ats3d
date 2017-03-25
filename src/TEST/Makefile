@@ -159,6 +159,35 @@ cleanall:: ; $(RMF) test03.exe
 
 ######
 
+TEST04_SOURCES_SATS = \
+  ../SATS/mesh/OBJ.sats \
+  ../SATS/image/pixmap.sats \
+  ../SATS/vector.sats
+TEST04_SOURCES_DATS = \
+  ../DATS/mesh/OBJ.dats \
+  ../DATS/image/pixmap.dats \
+  ../DATS/vec3i.dats \
+  ../DATS/vec2f.dats \
+  ../DATS/vec3f.dats \
+  test04.dats
+
+test04_C_O := \
+  $(patsubst %.c, %_c.o, $(SOURCES_C))
+test04_SATS_O := \
+  $(patsubst %.sats, %_sats.o, $(TEST04_SOURCES_SATS))
+test04_DATS_O := \
+  $(patsubst %.dats, %_dats.o, $(TEST04_SOURCES_DATS))
+all:: test04.exe
+test04.exe: \
+  $(test04_C_O) \
+  $(test04_SATS_O) \
+  $(test04_DATS_O) ; \
+  $(PATSCC) $(INCLUDE) $(MALLOCFLAG) $(CFLAGS) -o $@ $^ $(LDFLAGS) $(EXTRAFLAGS)
+regress:: test04.exe; ./$<
+cleanall:: ; $(RMF) test04.exe
+
+######
+
 include $(PATSHOME)/share/atsmake-post.mk
 
 ######
