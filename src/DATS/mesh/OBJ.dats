@@ -75,6 +75,7 @@ string_foreach$fwork<int>
   (c, env) = env := 10 * env + (c - '0')
 //
 val str0 = g1ofg0(str)
+// check if str0 begins with '-'...
 val i = string_foreach_env<int> (str0, env)
 //
 in
@@ -146,15 +147,28 @@ atof (str, res) = let
 //
 typedef tenv = double
 //
-val str0 = g1ofg0_string (str)
-//
 var env: tenv = 0.0
+val c = $UN.ptr0_get<char> ($UN.cast{ptr}(str))
+val str0 = g1ofg0_string (
+  case+ 0 of
+  | _ when c = '-' || c = '+' => $UN.cast{string} (ptr0_succ<char>($UN.cast{ptr}(str)))
+  | _ => str)
+// end of [val]
+val sgn =
+  case+ 0 of
+  | _ when c = '-' => ~1
+  | _ when c = '+' => 1
+  | _ => 1
+// end of [val]
+//
 implement{env}
 string_foreach$cont (c, env) = isdigit (c)
 implement
 string_foreach$fwork<tenv>
   (c, env) = env := 10 * env + double(c - '0')
 val n = string_foreach_env<tenv> (str0, env)
+prval () = lemma_string_param (str0)
+prval () = lemma_g1uint_param (n)
 var str1 = g0ofg1 (string_advance (str0, n))
 var dbl : double
 val r1 = atof_frac (str1, dbl)
@@ -164,14 +178,14 @@ in
     if :(dbl: double?) => r1 then let
       prval () = opt_unsome {double} (dbl)
       val () = str := str1
-      val () = res := env + dbl
+      val () = res := mul_int_double (sgn, env + dbl)
       prval () = opt_some {double} (res)
     in
       true
     end else let
       prval () = opt_unnone {double} (dbl)
       val () = str := str1
-      val () = res := env
+      val () = res := mul_int_double (sgn, env)
       prval () = opt_some {double} (res)
     in
       true
@@ -180,7 +194,7 @@ in
     if :(dbl: double?) => r1 then let // fractional part only
       prval () = opt_unsome {double} (dbl)
       val () = str := str1
-      val () = res := dbl
+      val () = res := mul_int_double (sgn, dbl)
       prval () = opt_some {double} (res)
     in
       true
@@ -267,84 +281,83 @@ end // end of [string_read_tup3]
 
 (* ****** ****** *)
 
-  implement
-  string_read<float> (s, res) = let
-    var d: double
+implement
+string_read<float> (s, res) = let
+  var d: double
+in
+  if :(d: double?) => atof (s, d) then let
+    prval () = opt_unsome {double} (d)
+    val () = res := g0float2float_double_float (d)
+    prval () = opt_some {float} (res)
   in
-    if :(d: double?) => atof (s, d) then let
-      prval () = opt_unsome {double} (d)
-      val () = res := g0float2float_double_float (d)
-      prval () = opt_some {float} (res)
-    in
-      true
-    end else let
-      prval () = opt_unnone {double} (d)
-      prval () = opt_none {float} (res)
-    in
-      false
-    end
-  end // end of [string_read]
-
-  implement
-  string_read<int> = atoi
+    true
+  end else let
+    prval () = opt_unnone {double} (d)
+    prval () = opt_none {float} (res)
+  in
+    false
+  end
+end // end of [string_read]
 
 implement
-  string_read<vec2f> (str, v) = let
-    implement
-    string_read$skip<> = skip_whitespace
-    var x: float and y: float
-    val res = string_read_tup2<float,float> (str, x, y)
-  in
-    if :(x: float?, y: float?) => res then let
-      prval () = opt_unsome_mac (x, y)
-      val () = vec2f_init2 (v, x, y)
-      prval () = opt_some {vec2f} (v) in
-      true
-    end else let
-      prval () = opt_clear_mac (x, y)
-      prval () = opt_none {vec2f} (v) in
-      false
-    end
-  end // end of [string_read<vec2f>]
+string_read<int> = atoi
+
+implement
+string_read<vec2f> (str, v) = let
+  implement
+  string_read$skip<> = skip_whitespace
+  var x: float and y: float
+  val res = string_read_tup2<float,float> (str, x, y)
+in
+  if :(x: float?, y: float?) => res then let
+    prval () = opt_unsome_mac (x, y)
+    val () = vec2f_init2 (v, x, y)
+    prval () = opt_some {vec2f} (v) in
+    true
+  end else let
+    prval () = opt_clear_mac (x, y)
+    prval () = opt_none {vec2f} (v) in
+    false
+  end
+end // end of [string_read<vec2f>]
 //
 implement
-  string_read<vec3f> (str, v) = let
-    implement
-    string_read$skip<> = skip_whitespace
-    var x: float and y: float and z: float
-    val res = string_read_tup3<float,float,float> (str, x, y, z)
-  in
-    if :(x: float?, y: float?, z: float?) => res then let
-      prval () = opt_unsome_mac (x, y, z)
-      val () = vec3f_init3 (v, x, y, z)
-      prval () = opt_some {vec3f} (v) in
-      true
-    end else let
-      prval () = opt_clear_mac (x, y, z)
-      prval () = opt_none {vec3f} (v) in
-      false
-    end
-  end // end of [string_read<vec3f>]
+string_read<vec3f> (str, v) = let
+  implement
+  string_read$skip<> = skip_whitespace
+  var x: float and y: float and z: float
+  val res = string_read_tup3<float,float,float> (str, x, y, z)
+in
+  if :(x: float?, y: float?, z: float?) => res then let
+    prval () = opt_unsome_mac (x, y, z)
+    val () = vec3f_init3 (v, x, y, z)
+    prval () = opt_some {vec3f} (v) in
+    true
+  end else let
+    prval () = opt_clear_mac (x, y, z)
+    prval () = opt_none {vec3f} (v) in
+    false
+  end
+end // end of [string_read<vec3f>]
 
 implement
-  string_read<vec3i> (str, v) = let
-    implement
-    string_read$skip<> (str) = ignoret (skip_string (str, "/"))
-    var x: int and y: int and z: int
-    val res = string_read_tup3<int,int,int> (str, x, y, z)
-  in
-    if :(x: int?, y: int?, z: int?) => res then let
-      prval () = opt_unsome_mac (x, y, z)
-      val () = vec3i_init3 (v, x, y, z)
-      prval () = opt_some {vec3i} (v) in
-      true
-    end else let
-      prval () = opt_clear_mac (x, y, z)
-      prval () = opt_none {vec3i} (v) in
-      false
-    end
-  end // end of [string_read<vec3i>]
-
+string_read<vec3i> (str, v) = let
+  implement
+  string_read$skip<> (str) = ignoret (skip_string (str, "/"))
+  var x: int and y: int and z: int
+  val res = string_read_tup3<int,int,int> (str, x, y, z)
+in
+  if :(x: int?, y: int?, z: int?) => res then let
+    prval () = opt_unsome_mac (x, y, z)
+    val () = vec3i_init3 (v, x, y, z)
+    prval () = opt_some {vec3i} (v) in
+    true
+  end else let
+    prval () = opt_clear_mac (x, y, z)
+    prval () = opt_none {vec3i} (v) in
+    false
+  end
+end // end of [string_read<vec3i>]
 
 (* ****** ****** *)
 
@@ -431,11 +444,13 @@ in
     end // end of [vt]
   | _ when skip_string (ln, "v") => let
       val () = skip_whitespace (ln)
+      val () = println!("rest of line: ", ln)
       var v: vec3f
     in
       if :(st: state, ln: string, v: vec3f?) => string_read<vec3f> (ln, v) then let
         prval () = opt_unsome {vec3f} (v)
         val () = $DA.dynarray_insert_atend_exn (st.verts, v)
+	val () = println!("v = ", v)
       in
         true
       end else let
@@ -474,26 +489,8 @@ in
   if :(state: state) => p > 0 then let // p=addr@(buf) or NULL
     var mystr = $UN.cast{string}(p)
   in
-      if :(state: state, mystr: string) => state_line (state, mystr) then
-        (println!("failed"); false)
-      else let
-        var fr : double
-        val res = atof (mystr, fr)
-        val () =
-          if :(fr: double?) => res then let
-            prval () = opt_unsome {double} (fr)
-            val () = println!("read double: ", fr)
-	    val () = println!("rest of string: ", mystr)
-          in
-          end else let
-            prval () = opt_unnone {double} (fr)
-	    val () = println!("failed to read a double")
-	    val () = println!("rest of string: ", mystr)
-          in
-          end // end of [if]
-      in
-        loop (inp, buf, sz, state)
-      end
+    if :(state: state, mystr: string) => ~state_line (state, mystr) then false
+    else loop (inp, buf, sz, state)
   end else true // end of [if]
 end // end of [loop]
 
@@ -598,138 +595,145 @@ state2mesh (
 
 implement
 state2mesh (src, dst) = let
-(*
-  var numverts: size_t
-  val verts = $DA.dynarray_getfree_arrayptr (src.verts, numverts)
-  var numnormals: size_t
-  val normals = $DA.dynarray_getfree_arrayptr (src.normals, numnormals)
-  var numtexcoords: size_t
-  val texcoords = $DA.dynarray_getfree_arrayptr (src.texcoords, numtexcoords)
-  var numfaces: size_t
-  val faces = $DA.dynarray_getfree_arrayptr (src.faces, numfaces)
-*)
-  var numverts: size_t
-  val (pf_verts, fpf_verts | p_verts) = $DA.dynarray_get_array (src.verts, numverts)
-  var numnormals: size_t
-  val (pf_normals, fpf_normals | p_normals) = $DA.dynarray_get_array (src.normals, numnormals)
-  var numtexcoords: size_t
-  val (pf_texcoords, fpf_texcoords | p_texcoords) = $DA.dynarray_get_array (src.texcoords, numtexcoords)
-  var numfaces: size_t
-  val (pf_faces, fpf_faces | p_faces) = $DA.dynarray_get_array (src.faces, numfaces)
-
-  prval [numfaces:int] EQINT () = eqint_make_guint (numfaces)
-
-  val (pf_indices, pf_free_indices | p_indices) = array_ptr_alloc<vec3i> (numfaces)
-
-  fun
-  get_vec3i_face {l:addr} (
-    pf_at : !face3 @ l
-  | p_f: ptr l
-  , x: &int? >> int
-  , y: &int? >> int
-  , z: &int? >> int
-  ): void = {
-    val () = x := vec3i_get_x (!p_f.a)
-    val () = y := vec3i_get_y (!p_f.b)
-    val () = z := vec3i_get_z (!p_f.c)
-  } (* end of [get_vec3i_face] *)
-
-  val nverts = (sz2i)numverts
-  // go over all faces, ensure bounds
-  implement(env)
-  initize_array_env$elt<vec3i><env> (env, i, face) = let
-    fun checkbounds (x: int): bool = (x >= 1 && x < (g0ofg1)nverts)
-
-    val i = $UN.cast{sizeLt(numfaces)} (i)
-    prval (pf_faces, fpf_faces) = decode($vcopyenv_v(pf_faces))
-    val (pf_at_fc, fpf_fc | p_fc) = array_ptr_takeout (pf_faces | p_faces, i)
-    var x: int and y: int and z: int
-    val () = get_vec3i_face (pf_at_fc | p_fc, x, y, z)
-    prval () = pf_faces := fpf_fc (pf_at_fc)
-    prval () = fpf_faces (pf_faces)
-  in
-    if ~checkbounds (x) ||
-       ~checkbounds (y) ||
-       ~checkbounds (z) then let
-      prval () = opt_none {vec3i} (face)
-    in
-      false
-    end else let
-      val () = vec3i_init3 (face, x, y, z)
-      prval () = opt_some {vec3i} (face)
-    in
-      true
-    end // end of [if]
-  end // end of [initize_array_env$elt]
-  var myenv : void = ()
-  val res = initize_array_env_lr<vec3i><void> (myenv, !p_indices, numfaces)
-  //
-  prval () = fpf_verts (pf_verts)
-  prval () = fpf_normals (pf_normals)
-  prval () = fpf_texcoords (pf_texcoords)
+//
+var numverts: size_t
+val (pf_verts, fpf_verts | p_verts) = $DA.dynarray_get_array (src.verts, numverts)
+var numnormals: size_t
+val (pf_normals, fpf_normals | p_normals) = $DA.dynarray_get_array (src.normals, numnormals)
+var numtexcoords: size_t
+val (pf_texcoords, fpf_texcoords | p_texcoords) = $DA.dynarray_get_array (src.texcoords, numtexcoords)
+var numfaces: size_t
+val (pf_faces, fpf_faces | p_faces) = $DA.dynarray_get_array (src.faces, numfaces)
+//
+prval [numfaces:int] EQINT () = eqint_make_guint (numfaces)
+//
+val (pf_indices, pf_free_indices | p_indices) = array_ptr_alloc<vec3i> (numfaces)
+//
+fun
+get_vec3i_face {l:addr} (
+  pf_at : !face3 @ l
+| p_f: ptr l
+, x: &int? >> int
+, y: &int? >> int
+, z: &int? >> int
+): void = {
+  val () = x := vec3i_get_x (!p_f.a)
+  val () = y := vec3i_get_y (!p_f.b)
+  val () = z := vec3i_get_z (!p_f.c)
+} (* end of [get_vec3i_face] *)
+//
+val nverts = (sz2i)numverts
+//
+// go over all faces, ensure bounds
+implement(env)
+initize_array_env$elt<vec3i><env> (env, i, face) = let
+  fun checkbounds (x: int): bool = (x >= 1 && x <= (g0ofg1)nverts) // 1-based indexing
+//
+  val i = $UN.cast{sizeLt(numfaces)} (i)
+  prval (pf_faces, fpf_faces) = decode($vcopyenv_v(pf_faces))
+  val (pf_at_fc, fpf_fc | p_fc) = array_ptr_takeout (pf_faces | p_faces, i)
+  var x: int and y: int and z: int
+  val () = get_vec3i_face (pf_at_fc | p_fc, x, y, z)
+  prval () = pf_faces := fpf_fc (pf_at_fc)
   prval () = fpf_faces (pf_faces)
-  //
 in
-  if res then let
-    prval () = opt_unsome {@[vec3i][numfaces]} (!p_indices)
-
-    val () = dst.verts := src.verts
-    val () = dst.normals := src.normals
-    val () = dst.texcoords := src.texcoords
-    val () = $DA.dynarray_free (src.faces)
-    val indices = arrayptr_encode (pf_indices, pf_free_indices | p_indices)
-    val () = dst.faces := arrayptrsz_encode @(indices, numfaces)
-    
-    prval () = opt_none {state} (src)
-    prval () = opt_some {mesh} (dst)
+  if ~checkbounds (x) ||
+     ~checkbounds (y) ||
+     ~checkbounds (z) then let
+    prval () = opt_none {vec3i} (face)
+    val () = println!("numverts: ", nverts)
+    val () = println!("bounds check failed for face: ", i, ", vertices ", x, ",", y, ",", z)
+  in
+    false
+  end else let
+    val () = vec3i_init3 (face, pred(x), pred(y), pred(z))
+    prval () = opt_some {vec3i} (face)
+  in
+    true
+  end // end of [if]
+end // end of [initize_array_env$elt]
+//
+var myenv : void = ()
+val res = initize_array_env_lr<vec3i><void> (myenv, !p_indices, numfaces)
+//
+prval () = fpf_verts (pf_verts)
+prval () = fpf_normals (pf_normals)
+prval () = fpf_texcoords (pf_texcoords)
+prval () = fpf_faces (pf_faces)
+//
+in
+//
+if res then let
+//
+  prval () = opt_unsome {@[vec3i][numfaces]} (!p_indices)
+//
+  val () = dst.verts := src.verts
+  val () = dst.normals := src.normals
+  val () = dst.texcoords := src.texcoords
+  val () = $DA.dynarray_free (src.faces)
+  val indices = arrayptr_encode (pf_indices, pf_free_indices | p_indices)
+  val () = dst.faces := arrayptrsz_encode @(indices, numfaces)
+//    
+  prval () = opt_none {state} (src)
+  prval () = opt_some {mesh} (dst)
+//
+in
+  true
+end else let
+  prval () = opt_unnone {@[vec3i][numfaces]} (!p_indices)
+//
+  val () = array_ptr_free {vec3i} (pf_indices, pf_free_indices | p_indices)
+//
+  prval () = opt_some {state} (src)
+  prval () = opt_none {mesh} (dst)
+in
+  false
+end // end of [if]
+//
+end // end of [state2mesh]
+//
+(* ****** ****** *)
+//
+implement
+mesh_delete (mesh) = {
+//
+val () = $DA.dynarray_free (mesh.verts)
+val () = $DA.dynarray_free (mesh.normals)
+val () = $DA.dynarray_free (mesh.texcoords)
+val @(faces, nfaces) = arrayptrsz_decode (mesh.faces)
+val () = arrayptr_free {vec3i} (faces)
+//
+} (* end of [mesh_delete] *)
+//
+implement
+load_OBJ (input, dest) = let
+//
+#define BUFSZ 256
+var buf = @[byte][BUFSZ]()
+var x: state
+val () = state_new (x)
+val res = loop (input, buf, BUFSZ, x)
+//
+in
+//
+if :(x: state?) => res then (
+  if :(x: state?) => state2mesh (x, dest) then let
+    prval () = opt_unnone {state} (x)
   in
     true
   end else let
-    prval () = opt_unnone {@[vec3i][numfaces]} (!p_indices)
-
-    val () = array_ptr_free {vec3i} (pf_indices, pf_free_indices | p_indices)
-
-    prval () = opt_some {state} (src)
-    prval () = opt_none {mesh} (dst)
-  in
-    false
-  end
-end
-
-(* ****** ****** *)
-
-implement
-mesh_delete (mesh) = {
-  val () = $DA.dynarray_free (mesh.verts)
-  val () = $DA.dynarray_free (mesh.normals)
-  val () = $DA.dynarray_free (mesh.texcoords)
-  val @(faces, nfaces) = arrayptrsz_decode (mesh.faces)
-  val () = arrayptr_free {vec3i} (faces)
-}
-
-implement
-load_OBJ (input, dest) = let
-  #define BUFSZ 256
-  var buf = @[byte][BUFSZ]()
-  var x: state
-  val () = state_new (x)
-  val res = loop (input, buf, BUFSZ, x)
-in
-  if :(x: state?) => res then (
-    if :(x: state?) => state2mesh (x, dest) then let
-      prval () = opt_unnone {state} (x)
-    in
-      true
-    end else let
-      prval () = opt_unsome {state} (x)
-      val () = state_delete (x)
-    in
-      false
-    end
-  ) else let
+    prval () = opt_unsome {state} (x)
     val () = state_delete (x)
-    prval () = opt_none (dest)
   in
     false
   end
-end
+) else let
+  val () = state_delete (x)
+  prval () = opt_none (dest)
+in
+  false
+end // end of [if]
+//
+end // end of [load_OBJ]
+//
+(* ****** end of [OBJ.dats] ****** *)
