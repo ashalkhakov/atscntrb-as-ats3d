@@ -162,10 +162,12 @@ cleanall:: ; $(RMF) test03.exe
 TEST04_SOURCES_SATS = \
   ../SATS/mesh/OBJ.sats \
   ../SATS/image/pixmap.sats \
+  ../SATS/image/PPM.sats \
   ../SATS/vector.sats
 TEST04_SOURCES_DATS = \
   ../DATS/mesh/OBJ.dats \
   ../DATS/image/pixmap.dats \
+  ../DATS/image/PPM.dats \
   ../DATS/vec3i.dats \
   ../DATS/vec2f.dats \
   ../DATS/vec3f.dats \

@@ -1,3 +1,5 @@
+staload "./../vector.sats"
+
 absvt@ype arrayptrsz (a:vt@ype) = @(ptr, size_t)
 
 castfn
@@ -13,6 +15,11 @@ absvt@ype mesh = @{
   texcoords= ptr,
   faces= @(ptr, size_t)
 } (* end of [mesh] *)
+
+fun{env:vt@ype}
+mesh_foreach_face_env$fwork (env: &env, f: size_t, va: &vec3f, vb: &vec3f, vc: &vec3f): void
+fun{env:vt@ype}
+mesh_foreach_face_env (env: &env, m: &mesh): void
 
 fun
 mesh_delete (&mesh >> mesh?): void

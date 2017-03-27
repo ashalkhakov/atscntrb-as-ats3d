@@ -71,6 +71,26 @@ in
 end // end of [pixmap_set_at_int]
 
 implement{a}
+pixmap_set_at_int2 {m,n} (pm, i, j, x) = let
+//
+  val i = (g1ofg0)i
+  val w = pixmap_get_width (pm)
+  prval () = lemma_g1uint_param (w)
+  val w = g1uint2int_size_int (w)
+//
+  val j = (g1ofg0)j
+  val h = pixmap_get_height (pm)
+  prval () = lemma_g1uint_param (h)
+  val h = g1uint2int_size_int (h)
+//
+in
+  if i < w then (
+    if i >= 0 then (
+      if j >= 0 then (
+        if j < h then pixmap_set_at_int (pm, i, j, x))))
+end
+
+implement{a}
 pixmap_get_width {m,n} (pm) = pm.2
 implement{a}
 pixmap_get_height {m,n} (pm) = pm.3

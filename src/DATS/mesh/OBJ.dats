@@ -92,6 +92,112 @@ end // end of [atoi]
 
 (* ****** ****** *)
 
+%{
+// adapted from: https://gist.github.com/braydo25/95827fc2f49d46a42eb44dcce0c7675e
+
+enum PositionState {
+    POSITION_STATE_WHOLE,
+    POSITION_STATE_DECIMAL,
+    POSITION_STATE_NOTATION
+};
+
+int isDigit(char input) {
+    return (input >= '0' && input <= '9') ? 1 : 0;
+}
+
+long power(int base, int exponent) {
+    long result = (exponent > 0) ? base : 0;
+
+    for (int i = 0; i < exponent - 1; i++) {
+        result *= base;
+    }
+
+    return result;
+}
+
+double another_atof(atstkind_type(atstype_ptrk) input_ptr, atstkind_type(atstype_ptrk) read) {
+    char* input = (char*)input_ptr;
+    int sign = 1;
+    int whole = 0;
+    double decimal = 0;
+    int decimalCount = 0;
+    int notationExponents = 0;
+    int notationSign = 1;
+
+    *(int *)read = 0;
+
+    int i = 0;
+    while ((input[i] < '0' || input[i] > '9') && input[i] != '+' && input[i] != '-') {
+        i++;
+    }
+
+    if (input[i] == '+' || input[i] == '-') {
+        sign = (input[i++] == '-') ? -1 : sign;
+    }
+
+    enum PositionState state = POSITION_STATE_WHOLE;
+
+    while (input[i] != '\n' && input[i] != ' ' && input[i] != '\t' && input[i] != '\0') {
+        // Return 0 for invalid characters.
+        if ((input[i] < '0' || input[i] > '9') && input[i] != 'e' && input[i] != 'E' && input[i] != '-' && input[i] != '+' && input[i] != '.') {
+            fprintf(stderr, "Invalid char \"%c\" found in atof() input.\n", input[i]);
+	    *(int *)read = 0;
+            return 0;
+        }
+
+        // Handle whole numbers
+        if (state == POSITION_STATE_WHOLE) {
+            if (isDigit(input[i])) {
+                whole = whole * 10 + (input[i] - '0');
+            }
+        }
+
+        // Handle decimals
+        if (state == POSITION_STATE_DECIMAL) {
+            if (isDigit(input[i])) {
+                decimalCount++;
+                decimal = decimal * 10 + (input[i] - '0');
+            }
+        }
+        state = (input[i] == '.') ? POSITION_STATE_DECIMAL : state;
+
+        // Handle notation
+        if (state == POSITION_STATE_NOTATION) {
+            if (input[i] == '-') {
+                notationSign = -1;
+                i++;
+            }
+
+            if (isDigit(input[i])) {
+                notationExponents = notationExponents * 10 + (input[i] - '0');
+            }
+        }
+        state = (input[i] == 'e' || input[i] == 'E') ? POSITION_STATE_NOTATION : state;
+
+        // Next char in input
+        i++;
+    }
+
+    // Calculate result
+    double result = whole;
+
+    if (decimalCount > 0) {
+        result += decimal / power(10, decimalCount);
+    }
+
+    if (notationExponents > 0) {
+        if (notationSign > 0) {
+            result *= power(10, notationExponents);
+        } else {
+            result /= power(10, notationExponents);
+        }
+    }
+
+    *(int *)read = i;
+    return sign * result;
+};
+%}
+
 macdef double = g0int2float_int_double
 
 extern
@@ -142,6 +248,28 @@ end // end of [atof_frac]
 
 in // in of [local]
 
+extern
+fun
+another_atof(input: string, read: ptr): double = "ext#another_atof"
+implement
+atof (str, res) = let
+  var bytes_read: int = 0
+  val x = another_atof (str, $UN.cast{ptr}(addr@bytes_read))
+in
+  if bytes_read > 0 then let
+    val p0 = $UN.cast{ptr} (str)
+    val () = str := $UN.cast{string} (ptr0_add_gint<char> (p0, bytes_read))
+    val () = res := x
+    prval () = opt_some {double} (res) in
+    true
+  end else let
+    prval () = opt_none {double} (res) in
+    false
+  end
+end
+
+(*
+// TODO: scientific notation: e.g. 2.04632e-05
 implement
 atof (str, res) = let
 //
@@ -206,6 +334,7 @@ in
     end
   end
 end // end of [atof]
+*)
 
 end // end of [local]
 
@@ -342,13 +471,22 @@ end // end of [string_read<vec3f>]
 
 implement
 string_read<vec3i> (str, v) = let
+(*
+  val () = println!("reading vec3i [", str, "]")
+*)
   implement
   string_read$skip<> (str) = ignoret (skip_string (str, "/"))
   var x: int and y: int and z: int
   val res = string_read_tup3<int,int,int> (str, x, y, z)
+(*
+  val () = println!("rest of string [", str, "]")
+*)
 in
   if :(x: int?, y: int?, z: int?) => res then let
     prval () = opt_unsome_mac (x, y, z)
+  (*
+    val () = println!("got: ", x, ",", y, ",", z)
+  *)
     val () = vec3i_init3 (v, x, y, z)
     prval () = opt_some {vec3i} (v) in
     true
@@ -364,25 +502,25 @@ end // end of [string_read<vec3i>]
 typedef face3 = @{a= vec3i, b= vec3i, c= vec3i}
 
 implement
-  string_read<face3> (str, v) = let
-    implement
-    string_read$skip<> = skip_whitespace
-    var x: vec3i and y: vec3i and z: vec3i
-    val res = string_read_tup3<vec3i,vec3i,vec3i> (str, x, y, z)
-  in
-    if :(x: vec3i?, y: vec3i?, z: vec3i?) => res then let
-      prval () = opt_unsome_mac (x, y, z)
-      val () = v.a := x
-      val () = v.b := y
-      val () = v.c := z
-      prval () = opt_some {face3} (v) in
-      true
-    end else let
-      prval () = opt_clear_mac (x, y, z)
-      prval () = opt_none {face3} (v) in
-      false
-    end    
-  end // end of [string_read<face3>]
+string_read<face3> (str, v) = let
+  implement
+  string_read$skip<> = skip_whitespace
+  var x: vec3i and y: vec3i and z: vec3i
+  val res = string_read_tup3<vec3i,vec3i,vec3i> (str, x, y, z)
+in
+  if :(x: vec3i?, y: vec3i?, z: vec3i?) => res then let
+    prval () = opt_unsome_mac (x, y, z)
+    val () = v.a := x
+    val () = v.b := y
+    val () = v.c := z
+    prval () = opt_some {face3} (v) in
+    true
+  end else let
+    prval () = opt_clear_mac (x, y, z)
+    prval () = opt_none {face3} (v) in
+    false
+  end    
+end // end of [string_read<face3>]
 
 vtypedef state = @{
   verts= $DA.dynarray (vec3f),
@@ -444,13 +582,11 @@ in
     end // end of [vt]
   | _ when skip_string (ln, "v") => let
       val () = skip_whitespace (ln)
-      val () = println!("rest of line: ", ln)
       var v: vec3f
     in
       if :(st: state, ln: string, v: vec3f?) => string_read<vec3f> (ln, v) then let
         prval () = opt_unsome {vec3f} (v)
         val () = $DA.dynarray_insert_atend_exn (st.verts, v)
-	val () = println!("v = ", v)
       in
         true
       end else let
@@ -489,7 +625,7 @@ in
   if :(state: state) => p > 0 then let // p=addr@(buf) or NULL
     var mystr = $UN.cast{string}(p)
   in
-    if :(state: state, mystr: string) => ~state_line (state, mystr) then false
+    if :(state: state, mystr: string) => ~state_line (state, mystr) then (println!("error parsing line: ", mystr); false)
     else loop (inp, buf, sz, state)
   end else true // end of [if]
 end // end of [loop]
@@ -618,8 +754,8 @@ get_vec3i_face {l:addr} (
 , z: &int? >> int
 ): void = {
   val () = x := vec3i_get_x (!p_f.a)
-  val () = y := vec3i_get_y (!p_f.b)
-  val () = z := vec3i_get_z (!p_f.c)
+  val () = y := vec3i_get_x (!p_f.b)
+  val () = z := vec3i_get_x (!p_f.c)
 } (* end of [get_vec3i_face] *)
 //
 val nverts = (sz2i)numverts
@@ -627,7 +763,7 @@ val nverts = (sz2i)numverts
 // go over all faces, ensure bounds
 implement(env)
 initize_array_env$elt<vec3i><env> (env, i, face) = let
-  fun checkbounds (x: int): bool = (x >= 1 && x <= (g0ofg1)nverts) // 1-based indexing
+  fun checkbounds (x: int): bool = (x >= 1 && x <= ((g0ofg1)nverts)) // 1-based indexing
 //
   val i = $UN.cast{sizeLt(numfaces)} (i)
   prval (pf_faces, fpf_faces) = decode($vcopyenv_v(pf_faces))
@@ -646,6 +782,9 @@ in
   in
     false
   end else let
+  (*
+    val () = println!("face: ", x, ", ", y, ", ", z)
+  *)
     val () = vec3i_init3 (face, pred(x), pred(y), pred(z))
     prval () = opt_some {vec3i} (face)
   in
@@ -691,6 +830,53 @@ in
 end // end of [if]
 //
 end // end of [state2mesh]
+//
+(* ****** ****** *)
+//
+implement{env}
+mesh_foreach_face_env (env, mesh) = let
+//
+var numverts: size_t
+val (pf_verts, fpf_verts | p_verts) = $DA.dynarray_get_array (mesh.verts, numverts)
+var numnormals: size_t
+val (pf_normals, fpf_normals | p_normals) = $DA.dynarray_get_array (mesh.normals, numnormals)
+var numtexcoords: size_t
+val (pf_texcoords, fpf_texcoords | p_texcoords) = $DA.dynarray_get_array (mesh.texcoords, numtexcoords)
+val (faces, numfaces) = arrayptrsz_decode (mesh.faces)
+val p_faces = arrayptr2ptr (faces)
+prval pf_faces = arrayptr_takeout (faces)
+//
+prval [nverts:int] EQINT () = eqint_make_guint (numverts)
+//
+implement
+array_iforeach$fwork<vec3i><env> (i, face, env) = {
+  val i0 = $UN.cast{sizeLt(nverts)}(face.x())
+  val i1 = $UN.cast{sizeLt(nverts)}(face.y())
+  val i2 = $UN.cast{sizeLt(nverts)}(face.z())
+  prval (pf_verts, fpf) = decode($vcopyenv_v(pf_verts))
+  val pc_v0 = array_getref_at<vec3f> (!p_verts, i0)
+  val pc_v1 = array_getref_at<vec3f> (!p_verts, i1)
+  val pc_v2 = array_getref_at<vec3f> (!p_verts, i2)
+  val (pf_v0, fpf_v0 | p_v0) = $UN.cptr_vtake (pc_v0)
+  val (pf_v1, fpf_v1 | p_v1) = $UN.cptr_vtake (pc_v1)
+  val (pf_v2, fpf_v2 | p_v2) = $UN.cptr_vtake (pc_v2)
+  val () = mesh_foreach_face_env$fwork<env> (env, i, !p_v0, !p_v1, !p_v2)
+  prval () = fpf_v0 (pf_v0)
+  prval () = fpf_v1 (pf_v1)
+  prval () = fpf_v2 (pf_v2)
+  prval () = fpf (pf_verts)
+} (* end of [array_foreach$fwork] *)
+//
+val _ = array_iforeach_env<vec3i><env> (!p_faces, numfaces, env)
+//
+prval () = fpf_verts (pf_verts)
+prval () = fpf_normals (pf_normals)
+prval () = fpf_texcoords (pf_texcoords)
+prval () = arrayptr_addback (pf_faces | faces)
+val () = mesh.faces := arrayptrsz_encode @(faces, numfaces)
+//   
+in
+end // end of [mesh_foreach_face_env]
 //
 (* ****** ****** *)
 //

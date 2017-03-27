@@ -16,6 +16,8 @@ pixmap_delete_getbuf {a:t@ype} {m,n:int} (
 fun{a:t@ype}
 pixmap_set_at_int {m,n:int} (&pixmap (INV(a), m, n), natLt(m), natLt(n), a): void
 overload [] with pixmap_set_at_int
+fun{a:t@ype}
+pixmap_set_at_int2 {m,n:int} (&pixmap (INV(a), m, n), int, int, a): void
 
 fun{a:t@ype}
 pixmap_get_width {m,n:int} (&pixmap (INV(a), m, n)): size_t m
