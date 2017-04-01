@@ -91,6 +91,17 @@ in
 end
 
 implement{a}
+pixmap_get_at_int {m,n} (pm, i, j) = let
+  val (pf_mat, pf_free | m, n, p_mat) = pm
+  val i = (i2sz)i
+  val j = (i2sz)j
+  val res = matrix_get_at_size<a> (!p_mat, i, n, j)
+  val () = pm := (pf_mat, pf_free | m, n, p_mat)
+in
+  res
+end
+  
+implement{a}
 pixmap_get_width {m,n} (pm) = pm.2
 implement{a}
 pixmap_get_height {m,n} (pm) = pm.3

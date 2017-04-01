@@ -320,6 +320,98 @@ overload .w with vec4f_set_w
 (* ****** ****** *)
 
 typedef
+vector_2_int_t0ype =
+$extype_struct "vec2i_t" of {
+  V= @[int][2]
+}
+
+stadef vec2i = vector_2_int_t0ype // local shorthand
+//
+fun{vt:vt@ype}
+vec2i_init$fwork (natLt(2), &(vt)): int
+//
+fun{a:t@ype}{env:vt@ype}
+vec2i_fold$fwork (&a >> a, natLt(2), &(env) >> _): void
+//
+fun{vt:vt@ype}
+vec2i_init_env (
+  vec: &vec2i? >> _, env: &(vt)
+): void // end of [vec2i_init_env]
+//
+fun{a:t@ype}{env:vt@ype}
+vec2i_fold_env  (
+  res: &a >> a
+, env: &(env) >> _
+): void // end of [vec2i_fold_env]
+//
+fun add_vec2i_vec2i (&vec2i, &vec2i): vec2i
+fun mul_int_vec2i (int, &vec2i): vec2i
+fun neg_vec2i (&vec2i): vec2i
+fun sub_vec2i_vec2i (&vec2i, &vec2i): vec2i
+fun length_sq_vec2i (&vec2i): int
+fun length_vec2i (&vec2i): int
+fun normalize_vec2i (&vec2i): vec2i
+fun dotprod_vec2i_vec2i (&vec2i, &vec2i): int
+fun lerp_vec2i_vec2i_int (&vec2i, &vec2i, int): vec2i
+fun{}
+equal_vec2i$eps (): int
+fun
+equal_vec2i_vec2i (&vec2i, &vec2i): bool
+fun
+fprint_vec2i (FILEref, &vec2i): void
+fun
+print_vec2i (&vec2i): void
+
+//
+overload + with add_vec2i_vec2i
+overload * with mul_int_vec2i
+overload ~ with neg_vec2i
+overload - with sub_vec2i_vec2i
+overload .length_sq with length_sq_vec2i
+overload .length with length_vec2i
+overload .normalize with normalize_vec2i
+overload dotprod with dotprod_vec2i_vec2i
+overload lerp with lerp_vec2i_vec2i_int
+overload = with equal_vec2i_vec2i
+overload fprint with fprint_vec2i
+overload print with print_vec2i
+//
+
+fun
+vec2i_init1 (&vec2i? >> _, int): void
+overload .init with vec2i_init1
+
+fun
+vec2i_init2 (&vec2i? >> _, int, int): void
+overload .init with vec2i_init2
+
+fun
+vec2i_get_int (&vec2i, natLt(2)): int
+fun
+vec2i_set_int (&vec2i, natLt(2), int): void
+
+overload [] with vec2i_get_int of 10
+overload [] with vec2i_set_int of 10
+
+fun
+vec2i_get_x (&vec2i): int
+fun
+vec2i_get_y (&vec2i): int
+
+overload .x with vec2i_get_x
+overload .y with vec2i_get_y
+
+fun
+vec2i_set_x (&vec2i, int): void
+fun
+vec2i_set_y (&vec2i, int): void
+
+overload .x with vec2i_set_x
+overload .y with vec2i_set_y
+
+(* ****** ****** *)
+
+typedef
 vector_3_int_t0ype =
 $extype_struct "vec3i_t" of {
   V= @[int][3]

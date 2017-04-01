@@ -21,6 +21,17 @@ mesh_foreach_face_env$fwork (env: &env, f: size_t, va: &vec3f, vb: &vec3f, vc: &
 fun{env:vt@ype}
 mesh_foreach_face_env (env: &env, m: &mesh): void
 
+// TODO: add a generic "vertex type" parameter?
+fun{env:vt@ype}
+mesh_foreach_gface_env$fwork (
+  env: &env, f: size_t,
+  va: &vec3f, vb: &vec3f, vc: &vec3f,
+  na: &vec3f, nb: &vec3f, nc: &vec3f,
+  tc_a: &vec2f, tc_b: &vec2f, tc_c: &vec2f
+): void
+fun{env:vt@ype}
+mesh_foreach_gface_env (env: &env, m: &mesh): void
+
 fun
 mesh_delete (&mesh >> mesh?): void
 

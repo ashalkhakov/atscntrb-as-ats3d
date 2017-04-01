@@ -636,7 +636,7 @@ assume mesh = @{
   verts= $DA.dynarray (vec3f),
   normals= $DA.dynarray (vec3f),
   texcoords= $DA.dynarray (vec2f),
-  faces= arrayptrsz (vec3i)
+  faces= arrayptrsz (face3)
 } (* end of [mesh] *)
 
 (* ****** ****** *)
@@ -743,57 +743,77 @@ val (pf_faces, fpf_faces | p_faces) = $DA.dynarray_get_array (src.faces, numface
 //
 prval [numfaces:int] EQINT () = eqint_make_guint (numfaces)
 //
-val (pf_indices, pf_free_indices | p_indices) = array_ptr_alloc<vec3i> (numfaces)
+val (pf_indices, pf_free_indices | p_indices) = array_ptr_alloc<face3> (numfaces)
 //
 fun
 get_vec3i_face {l:addr} (
   pf_at : !face3 @ l
 | p_f: ptr l
-, x: &int? >> int
-, y: &int? >> int
-, z: &int? >> int
+, x: &int? >> int, y: &int? >> int, z: &int? >> int
+, nx: &int? >> int, ny: &int? >> int, nz: &int? >> int
+, tx: &int? >> int, ty: &int? >> int, tz: &int? >> int
 ): void = {
   val () = x := vec3i_get_x (!p_f.a)
   val () = y := vec3i_get_x (!p_f.b)
   val () = z := vec3i_get_x (!p_f.c)
+  val () = tx := vec3i_get_y (!p_f.a)
+  val () = ty := vec3i_get_y (!p_f.b)
+  val () = tz := vec3i_get_y (!p_f.c)
+  val () = nx := vec3i_get_z (!p_f.a)
+  val () = ny := vec3i_get_z (!p_f.b)
+  val () = nz := vec3i_get_z (!p_f.c)
 } (* end of [get_vec3i_face] *)
 //
 val nverts = (sz2i)numverts
+val nnorms = (sz2i)numnormals
+val ntexcoords = (sz2i)numtexcoords
 //
 // go over all faces, ensure bounds
 implement(env)
-initize_array_env$elt<vec3i><env> (env, i, face) = let
+initize_array_env$elt<face3><env> (env, i, face) = let
+//
   fun checkbounds (x: int): bool = (x >= 1 && x <= ((g0ofg1)nverts)) // 1-based indexing
+  fun checkbounds_norm (x: int): bool = (x >= 1 && x <= (g0ofg1)nnorms) // 1-based indexing
+  fun checkbounds_texcoord (x: int): bool = (x >= 1 && x <= (g0ofg1)ntexcoords) // 1-based indexing
 //
   val i = $UN.cast{sizeLt(numfaces)} (i)
   prval (pf_faces, fpf_faces) = decode($vcopyenv_v(pf_faces))
   val (pf_at_fc, fpf_fc | p_fc) = array_ptr_takeout (pf_faces | p_faces, i)
+
   var x: int and y: int and z: int
-  val () = get_vec3i_face (pf_at_fc | p_fc, x, y, z)
+  var nx: int and ny: int and nz: int
+  var tx: int and ty: int and tz: int
+  val () = get_vec3i_face (pf_at_fc | p_fc, x, y, z, nx, ny, nz, tx, ty, tz)
+  
   prval () = pf_faces := fpf_fc (pf_at_fc)
   prval () = fpf_faces (pf_faces)
 in
-  if ~checkbounds (x) ||
-     ~checkbounds (y) ||
-     ~checkbounds (z) then let
-    prval () = opt_none {vec3i} (face)
-    val () = println!("numverts: ", nverts)
+  if ~checkbounds (x) || ~checkbounds (y) || ~checkbounds (z) ||
+     ~checkbounds_norm (nx) || ~checkbounds_norm (ny) || ~checkbounds_norm (nz) ||
+     ~checkbounds_texcoord (tx) || ~checkbounds_texcoord (ty) || ~checkbounds_texcoord (tz)
+  then let
+    prval () = opt_none {face3} (face)
+    val () = println!("numverts: ", nverts, ", numnormals: ", nnorms, ", numtexcoords: ", ntexcoords)
     val () = println!("bounds check failed for face: ", i, ", vertices ", x, ",", y, ",", z)
+    val () = println!("bounds check failed for face: ", i, ", normals ", nx, ",", ny, ",", nz)
+    val () = println!("bounds check failed for face: ", i, ", texcoords ", tx, ",", ty, ",", tz)
   in
     false
   end else let
   (*
     val () = println!("face: ", x, ", ", y, ", ", z)
   *)
-    val () = vec3i_init3 (face, pred(x), pred(y), pred(z))
-    prval () = opt_some {vec3i} (face)
+    val () = vec3i_init3 (face.a, pred(x), pred(y), pred(z))
+    val () = vec3i_init3 (face.b, pred(nx), pred(ny), pred(nz))
+    val () = vec3i_init3 (face.c, pred(tx), pred(ty), pred(tz))
+    prval () = opt_some {face3} (face)
   in
     true
   end // end of [if]
 end // end of [initize_array_env$elt]
 //
 var myenv : void = ()
-val res = initize_array_env_lr<vec3i><void> (myenv, !p_indices, numfaces)
+val res = initize_array_env_lr<face3><void> (myenv, !p_indices, numfaces)
 //
 prval () = fpf_verts (pf_verts)
 prval () = fpf_normals (pf_normals)
@@ -804,7 +824,7 @@ in
 //
 if res then let
 //
-  prval () = opt_unsome {@[vec3i][numfaces]} (!p_indices)
+  prval () = opt_unsome {@[face3][numfaces]} (!p_indices)
 //
   val () = dst.verts := src.verts
   val () = dst.normals := src.normals
@@ -819,9 +839,9 @@ if res then let
 in
   true
 end else let
-  prval () = opt_unnone {@[vec3i][numfaces]} (!p_indices)
+  prval () = opt_unnone {@[face3][numfaces]} (!p_indices)
 //
-  val () = array_ptr_free {vec3i} (pf_indices, pf_free_indices | p_indices)
+  val () = array_ptr_free {face3} (pf_indices, pf_free_indices | p_indices)
 //
   prval () = opt_some {state} (src)
   prval () = opt_none {mesh} (dst)
@@ -849,10 +869,10 @@ prval pf_faces = arrayptr_takeout (faces)
 prval [nverts:int] EQINT () = eqint_make_guint (numverts)
 //
 implement
-array_iforeach$fwork<vec3i><env> (i, face, env) = {
-  val i0 = $UN.cast{sizeLt(nverts)}(face.x())
-  val i1 = $UN.cast{sizeLt(nverts)}(face.y())
-  val i2 = $UN.cast{sizeLt(nverts)}(face.z())
+array_iforeach$fwork<face3><env> (i, face, env) = {
+  val i0 = $UN.cast{sizeLt(nverts)}(face.a.x())
+  val i1 = $UN.cast{sizeLt(nverts)}(face.a.y())
+  val i2 = $UN.cast{sizeLt(nverts)}(face.a.z())
   prval (pf_verts, fpf) = decode($vcopyenv_v(pf_verts))
   val pc_v0 = array_getref_at<vec3f> (!p_verts, i0)
   val pc_v1 = array_getref_at<vec3f> (!p_verts, i1)
@@ -867,7 +887,7 @@ array_iforeach$fwork<vec3i><env> (i, face, env) = {
   prval () = fpf (pf_verts)
 } (* end of [array_foreach$fwork] *)
 //
-val _ = array_iforeach_env<vec3i><env> (!p_faces, numfaces, env)
+val _ = array_iforeach_env<face3><env> (!p_faces, numfaces, env)
 //
 prval () = fpf_verts (pf_verts)
 prval () = fpf_normals (pf_normals)
@@ -880,6 +900,94 @@ end // end of [mesh_foreach_face_env]
 //
 (* ****** ****** *)
 //
+implement{env}
+mesh_foreach_gface_env (env, mesh) = let
+//
+var numverts: size_t
+val (pf_verts, fpf_verts | p_verts) = $DA.dynarray_get_array (mesh.verts, numverts)
+var numnormals: size_t
+val (pf_normals, fpf_normals | p_normals) = $DA.dynarray_get_array (mesh.normals, numnormals)
+var numtexcoords: size_t
+val (pf_texcoords, fpf_texcoords | p_texcoords) = $DA.dynarray_get_array (mesh.texcoords, numtexcoords)
+val (faces, numfaces) = arrayptrsz_decode (mesh.faces)
+val p_faces = arrayptr2ptr (faces)
+prval pf_faces = arrayptr_takeout (faces)
+//
+prval [nverts:int] EQINT () = eqint_make_guint (numverts)
+prval [nnorms:int] EQINT () = eqint_make_guint (numnormals)
+prval [ntexcoords:int] EQINT () = eqint_make_guint (numtexcoords)
+//
+implement
+array_iforeach$fwork<face3><env> (i, face, env) = {
+  val i0 = $UN.cast{sizeLt(nverts)}(face.a.x())
+  val i1 = $UN.cast{sizeLt(nverts)}(face.a.y())
+  val i2 = $UN.cast{sizeLt(nverts)}(face.a.z())
+  val n0 = $UN.cast{sizeLt(nnorms)}(face.b.x())
+  val n1 = $UN.cast{sizeLt(nnorms)}(face.b.y())
+  val n2 = $UN.cast{sizeLt(nnorms)}(face.b.z())
+  val t0 = $UN.cast{sizeLt(ntexcoords)}(face.c.x())
+  val t1 = $UN.cast{sizeLt(ntexcoords)}(face.c.y())
+  val t2 = $UN.cast{sizeLt(ntexcoords)}(face.c.z())
+  
+  prval (pf_verts, fpf_verts) = decode($vcopyenv_v(pf_verts))
+  prval (pf_norms, fpf_norms) = decode($vcopyenv_v(pf_normals))
+  prval (pf_texcoords, fpf_texcoords) = decode($vcopyenv_v(pf_texcoords))
+  
+  val pc_v0 = array_getref_at<vec3f> (!p_verts, i0)
+  val pc_v1 = array_getref_at<vec3f> (!p_verts, i1)
+  val pc_v2 = array_getref_at<vec3f> (!p_verts, i2)
+  val (pf_v0, fpf_v0 | p_v0) = $UN.cptr_vtake (pc_v0)
+  val (pf_v1, fpf_v1 | p_v1) = $UN.cptr_vtake (pc_v1)
+  val (pf_v2, fpf_v2 | p_v2) = $UN.cptr_vtake (pc_v2)
+
+  val pc_n0 = array_getref_at<vec3f> (!p_normals, n0)
+  val pc_n1 = array_getref_at<vec3f> (!p_normals, n1)
+  val pc_n2 = array_getref_at<vec3f> (!p_normals, n2)
+  val (pf_n0, fpf_n0 | p_n0) = $UN.cptr_vtake (pc_n0)
+  val (pf_n1, fpf_n1 | p_n1) = $UN.cptr_vtake (pc_n1)
+  val (pf_n2, fpf_n2 | p_n2) = $UN.cptr_vtake (pc_n2)
+  
+  val pc_t0 = array_getref_at<vec2f> (!p_texcoords, t0)
+  val pc_t1 = array_getref_at<vec2f> (!p_texcoords, t1)
+  val pc_t2 = array_getref_at<vec2f> (!p_texcoords, t2)
+  val (pf_t0, fpf_t0 | p_t0) = $UN.cptr_vtake (pc_t0)
+  val (pf_t1, fpf_t1 | p_t1) = $UN.cptr_vtake (pc_t1)
+  val (pf_t2, fpf_t2 | p_t2) = $UN.cptr_vtake (pc_t2)
+
+  val () = mesh_foreach_gface_env$fwork<env> (
+    env, i, !p_v0, !p_v1, !p_v2, !p_n0, !p_n1, !p_n2, !p_t0, !p_t1, !p_t2
+  ) (* end of [val] *)
+
+  prval () = fpf_v0 (pf_v0)
+  prval () = fpf_v1 (pf_v1)
+  prval () = fpf_v2 (pf_v2)
+  
+  prval () = fpf_n0 (pf_n0)
+  prval () = fpf_n1 (pf_n1)
+  prval () = fpf_n2 (pf_n2)
+  
+  prval () = fpf_t0 (pf_t0)
+  prval () = fpf_t1 (pf_t1)
+  prval () = fpf_t2 (pf_t2)
+
+  prval () = fpf_verts (pf_verts)
+  prval () = fpf_norms (pf_norms)
+  prval () = fpf_texcoords (pf_texcoords)
+} (* end of [array_foreach$fwork] *)
+//
+val _ = array_iforeach_env<face3><env> (!p_faces, numfaces, env)
+//
+prval () = fpf_verts (pf_verts)
+prval () = fpf_normals (pf_normals)
+prval () = fpf_texcoords (pf_texcoords)
+prval () = arrayptr_addback (pf_faces | faces)
+val () = mesh.faces := arrayptrsz_encode @(faces, numfaces)
+//   
+in
+end // end of [mesh_foreach_gface_env]
+//
+(* ****** ****** *)
+//
 implement
 mesh_delete (mesh) = {
 //
@@ -887,7 +995,7 @@ val () = $DA.dynarray_free (mesh.verts)
 val () = $DA.dynarray_free (mesh.normals)
 val () = $DA.dynarray_free (mesh.texcoords)
 val @(faces, nfaces) = arrayptrsz_decode (mesh.faces)
-val () = arrayptr_free {vec3i} (faces)
+val () = arrayptr_free {face3} (faces)
 //
 } (* end of [mesh_delete] *)
 //

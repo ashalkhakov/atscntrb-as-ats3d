@@ -163,14 +163,19 @@ TEST04_SOURCES_SATS = \
   ../SATS/mesh/OBJ.sats \
   ../SATS/image/pixmap.sats \
   ../SATS/image/PPM.sats \
-  ../SATS/vector.sats
+  ../SATS/vector.sats \
+  ../SATS/matrix.sats
 TEST04_SOURCES_DATS = \
   ../DATS/mesh/OBJ.dats \
   ../DATS/image/pixmap.dats \
   ../DATS/image/PPM.dats \
+  ../DATS/vec2i.dats \
   ../DATS/vec3i.dats \
   ../DATS/vec2f.dats \
   ../DATS/vec3f.dats \
+  ../DATS/vec4f.dats \
+  ../DATS/mat3x3f.dats \
+  ../DATS/mat4x4f.dats \
   test04.dats
 
 test04_C_O := \

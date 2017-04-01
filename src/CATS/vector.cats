@@ -22,6 +22,11 @@ vec4f_t;
 
 typedef
 struct {
+  int V[2];
+} vec2i_t;
+
+typedef
+struct {
   int V[3];
 } vec3i_t;
 
