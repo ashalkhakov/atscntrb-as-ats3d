@@ -22,6 +22,30 @@ staload _ = "./../../DATS/vec3i.dats"
 #define ATS_DYNLOADFLAG 0
 
 (* ****** ****** *)
+// TODO: move to vector.sats?
+
+extern
+fun
+min_vec3f_vec3f (&vec3f, &vec3f): vec3f
+extern
+fun
+max_vec3f_vec3f (&vec3f, &vec3f): vec3f
+
+overload min with min_vec3f_vec3f
+overload max with max_vec3f_vec3f
+
+implement
+min_vec3f_vec3f (a, b) = res where {
+  var res: vec3f
+  val () = res.init (min (a.x(), b.x()), min (a.y(), b.y()), min (a.z(), b.z()))
+} (* end of [min_vec3f_vec3f] *)
+implement
+max_vec3f_vec3f (a, b) = res where {
+  var res: vec3f
+  val () = res.init (max (a.x(), b.x()), max (a.y(), b.y()), max (a.z(), b.z()))
+} (* end of [max_vec3f_vec3f] *)
+
+(* ****** ****** *)
 
 fun{}
 string_advance{n,i:nat | i <= n} .< >. (
@@ -526,7 +550,9 @@ vtypedef state = @{
   verts= $DA.dynarray (vec3f),
   normals= $DA.dynarray (vec3f),
   texcoords= $DA.dynarray (vec2f),
-  faces= $DA.dynarray (face3)
+  faces= $DA.dynarray (face3),
+  mins= vec3f,
+  maxs= vec3f
 }
 
 fun
@@ -535,6 +561,8 @@ state_new (x: &state? >> state): void = let
   val () = x.normals := $DA.dynarray_make_nil<vec3f>((i2sz)256)
   val () = x.texcoords := $DA.dynarray_make_nil<vec2f>((i2sz)256)
   val () = x.faces := $DA.dynarray_make_nil<face3>((i2sz)256)
+  val () = x.mins.init (0.0f, 0.0f, 0.0f)
+  val () = x.maxs.init (0.0f, 0.0f, 0.0f)
 in
 end
 fun
@@ -587,6 +615,8 @@ in
       if :(st: state, ln: string, v: vec3f?) => string_read<vec3f> (ln, v) then let
         prval () = opt_unsome {vec3f} (v)
         val () = $DA.dynarray_insert_atend_exn (st.verts, v)
+        val () = st.mins := min (st.mins, v)
+        val () = st.maxs := max (st.maxs, v)
       in
         true
       end else let
@@ -636,7 +666,9 @@ assume mesh = @{
   verts= $DA.dynarray (vec3f),
   normals= $DA.dynarray (vec3f),
   texcoords= $DA.dynarray (vec2f),
-  faces= arrayptrsz (face3)
+  faces= arrayptrsz (face3),
+  mins= vec3f,
+  maxs= vec3f
 } (* end of [mesh] *)
 
 (* ****** ****** *)
@@ -832,6 +864,8 @@ if res then let
   val () = $DA.dynarray_free (src.faces)
   val indices = arrayptr_encode (pf_indices, pf_free_indices | p_indices)
   val () = dst.faces := arrayptrsz_encode @(indices, numfaces)
+  val () = dst.mins := src.mins
+  val () = dst.maxs := src.maxs
 //    
   prval () = opt_none {state} (src)
   prval () = opt_some {mesh} (dst)
@@ -985,6 +1019,14 @@ val () = mesh.faces := arrayptrsz_encode @(faces, numfaces)
 //   
 in
 end // end of [mesh_foreach_gface_env]
+//
+(* ****** ****** *)
+//
+implement
+mesh_bounds (mesh, mins, maxs) = {
+  val () = mins := mesh.mins
+  val () = maxs := mesh.maxs
+} (* end of [mesh_bounds] *)
 //
 (* ****** ****** *)
 //

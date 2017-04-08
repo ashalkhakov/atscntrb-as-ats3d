@@ -24,6 +24,7 @@ staload _ = "./../DATS/mat4x4f.dats"
 
 staload "libats/libc/SATS/math.sats"
 staload _ = "libats/libc/DATS/math.dats"
+staload _ = "prelude/DATS/float.dats"
 
 (* ****** ****** *)
 
@@ -126,356 +127,410 @@ prval () = view@(pb) := pf_pixmap
 
 (* ****** ****** *)
 
-#define INCH_TO_MM 25.4f
-
-datatype FitResolutionGate = FRG_FILL | FRG_OVERSCAN
-//
-(*
-Compute screen coordinates based on a physically-based camera model
-http://www.scratchapixel.com/lessons/3d-basic-rendering/3d-viewing-pinhole-camera
-*)
-fun{}
-compute_screen_coords (
-    film_aperture_width: float,
-    film_aperture_height: float,
-    image_width: int,
-    image_height: int,
-    fit_film: FitResolutionGate,
-    near_clip_plane: float, 
-    focal_length: float,
-    top: &float? >> float, bottom: &float? >> float, left: &float? >> float, right: &float? >> float
-) : void = { 
-  val film_aspect_ratio = film_aperture_width / film_aperture_height
-  val device_aspect_ratio = g0int2float image_width / g0int2float image_height
-  
-  val () = top := ((film_aperture_height * INCH_TO_MM / 2) / focal_length) * near_clip_plane
-  val () = right := ((film_aperture_width * INCH_TO_MM / 2) / focal_length) * near_clip_plane
- 
-  // field of view (horizontal)
-  val fov = 2.0f * 180.0f / g0float2float(M_PI) * atan_float((film_aperture_width * INCH_TO_MM / 2.0f) / focal_length)
-  val () = println!("horizontal field of view: ", fov)
-
-  var xscale = 1.0f
-  var yscale = 1.0f 
-
-  val () =
-    case+ :(xscale: float, yscale: float) => fit_film of 
-    | FRG_OVERSCAN () => (
-        if :(xscale: float, yscale: float) => film_aspect_ratio > device_aspect_ratio then
-          yscale := film_aspect_ratio / device_aspect_ratio
-        else
-          xscale := device_aspect_ratio / film_aspect_ratio
-      ) (* end of [FRG_OVERSCAN] *)
-    | FRG_FILL () => (
-        if :(xscale: float, yscale: float) => film_aspect_ratio > device_aspect_ratio then
-          xscale := device_aspect_ratio / film_aspect_ratio
-        else
-          yscale := film_aspect_ratio / device_aspect_ratio 
-      ) (* end of [FRG_FILL] *)
-  // end of [val]
- 
-  val () = right := g0float_mul (right, xscale)
-  val () = top := g0float_mul (top, yscale)
- 
-  val () = bottom := ~top
-  val () = left := ~right
-} (* end of [compute_screen_coords] *)
-
-(*
-Compute vertex raster screen coordinates. Vertices are defined in world space. They are then converted to camera space, then to NDC space (in the range [-1,1]) and then to raster space. The z-coordinates of the vertex in raster space is set with the z-coordinate of the vertex in camera space.
-*)
-fun
-convert2raster( 
-  vworld: &vec3f,
-  world2camera: &mat4x4f,
-  l: float, r: float, t: float, b: float,
-  near: float,
-  image_width: int, image_height: int,
-  vraster: &vec3f? >> vec3f
-): void = {
-  var vworld4: vec4f
-  val () = vworld4.init (vworld.x(), vworld.y(), vworld.z(), 1.0f)
-  var vcamera = world2camera * vworld4
-  
-  var vscreen: vec2f 
-  val () = vscreen.init (
-    near * vcamera.x() / ~vcamera.z(),
-    near * vcamera.y() / ~vcamera.z()
-  ) (* end of [val] *)
- 
-  // now convert point from screen space to NDC space (in range [-1,1])
-  var vndc: vec2f
-  val () = vndc.init (
-    2.0f * vscreen.x() / (r - l) - (r + l) / (r - l),
-    2.0f * vscreen.y() / (t - b) - (t + b) / (t - b)
-  ) (* end of [val] *)
- 
-  // convert to raster space
-  val () = vraster.init (
-    (vndc.x() + 1.0f) / 2.0f * g0int2float image_width,
-    // in raster space y is down so invert direction
-    (1.0f - vndc.y()) / 2.0f * g0int2float image_height,
-    ~vcamera.z()
-  ) (* end of [val] *)
-} (* end of [convert2raster] *)
-
 macdef
 min3 (a, b, c) = min(,(a), min(,(b), ,(c)))
 macdef
 max3 (a, b, c) = max(,(a), max(,(b), ,(c)))
 
 fun
-edge_function (a: &vec3f, b: &vec3f , c: &vec3f): float =
-  (c.x() - a.x()) * (b.y() - a.y()) - (c.y() - a.y()) * (b.x() - a.x())
-// end of [edge_function]
+barycentric (A: &vec2f, B: &vec2f, C: &vec2f, P: &vec2f, res: &vec3f? >> vec3f): void = {    
+  var s: vec3f and t: vec3f
+  val () = t.init (C.y()-A.y(), B.y()-A.y(), A.y()-P.y())
+  val () = s.init (C.x()-A.x(), B.x()-A.x(), A.x()-P.x())
+  var u = crossprod (s, t)
+  val () =
+    if :(res: vec3f) => abs(u.z()) > 1e-2f then
+      // don't forget that u[2] is integer. If it is zero then triangle ABC is degenerate
+      res.init (1.0f - (u.x () + u.y ()) / u.z (), u.y () / u.z (), u.x () / u.z ())
+    else
+      // in this case generate negative coordinates, it will be thrown away by the rasterizator
+      res.init (~1.0f,1.0f,1.0f)
+  // end of [val]
+} (* end of [barycentric] *)
 
+extern
+fun{env:vt@ype}
+triangle$fragment (
+  env: &(@[env][3]) >> _
+, &vec3f
+, &uint32? >> opt (uint32, b)
+): #[b:bool] bool (b)
 
+fun{env:vt@ype}
+triangle {m,n:int} (
+  env: &(@[env][3]) >> _
+, a: &vec4f, b: &vec4f, c: &vec4f
+, image: &$PM.pixmap (uint32, m, n)
+, zbuffer: &$PM.pixmap (uint8, m, n)
+): void = {
 //
-extern
-fun{}
-rasterize_tri$raster (v: &vec3f, r: &vec3f? >> vec3f): void
-extern
-fun{}
-rasterize_tri$image_width (): int
-extern
-fun{}
-rasterize_tri$image_height (): int
-extern
-fun{}
-rasterize_tri$depth_test (x: int, y: int, z: float): bool
-extern
-fun{}
-rasterize_tri$fb_write (x: int, y: int, c: uint32): void
-
-fun{}  
-rasterize_tri (
-  v0: &vec3f, v1: &vec3f, v2: &vec3f, st0: &vec2f, st1: &vec2f, st2: &vec2f
-): void = let
-  var v0r: vec3f
-  and v1r: vec3f
-  and v2r: vec3f
-
-  // Convert the vertices of the triangle to raster space
-  val () = rasterize_tri$raster (v0, v0r)
-  val () = rasterize_tri$raster (v1, v1r)
-  val () = rasterize_tri$raster (v2, v2r)
-
-  // Precompute reciprocal of vertex z-coordinate
-  val () = v0r.z (1.0f / v0r.z())
-  val () = v1r.z (1.0f / v1r.z())
-  val () = v2r.z (1.0f / v2r.z())
-
-  // Prepare vertex attributes. Divide them by their vertex z-coordinate (though we use a multiplication here because v.z = 1 / v.z) 
-  var st0: vec2f = v0r.z() * st0
-  var st1: vec2f = v1r.z() * st1
-  var st2: vec2f = v2r.z() * st2
-
-  val xmin = min3 (v0r.x(), v1r.x(), v2r.x())
-  val ymin = min3 (v0r.y(), v1r.y(), v2r.y())
-  val xmax = max3 (v0r.x(), v1r.x(), v2r.x())
-  val ymax = max3 (v0r.y(), v1r.y(), v2r.y())
-in
+  var bboxmin: vec2f
+  and bboxmax: vec2f
 //
-// the triangle is out of screen
-if xmin > (g0int2float)(rasterize_tri$image_width () - 1) ||
-   xmax < 0.0f ||
-   ymin > (g0int2float)(rasterize_tri$image_height () - 1) ||
-   ymax < 0.0f then ()
-else let
-  // be careful xmin/xmax/ymin/ymax can be negative. Don't cast to uint32_t
-  val x0 = max (0, g0float2int(floor(xmin)))
-  val x1 = min (rasterize_tri$image_width () - 1, g0float2int(floor(xmax)))
-  val y0 = max (0, g0float2int(floor(ymin)))
-  val y1 = min (rasterize_tri$image_height () - 1, g0float2int(floor(ymax)))
-        
-  // what if area < 0? say a degenerate triangle?
-  val area = edge_function (v0r, v1r, v2r)
-in
-  if area <= 0.0f then ()
-  else let
-    // inner loop
-    // y0 <= y1
-    // x0 <= x1
-    // also:
-    // 0 <= y0, y1 <= IMAGE_HEIGHT-1
-    // 0 <= x0, x1 <= IMAGE_WIDTH-1
-    var y: int = 0
-    var x: int = 0
-  in
-    for (y := y0; y <= y1; y := succ(y)) (
-      for (x := x0; x <= x1; x := succ(x)) (let
-        var pixel_sample: vec3f
-        val () = pixel_sample.init (g0int2float x + 0.5f, g0int2float y + 0.5f, 0.0f)
-
-        var w0 = edge_function (v1r, v2r, pixel_sample)
-        var w1 = edge_function (v2r, v0r, pixel_sample) 
-        var w2 = edge_function (v0r, v1r, pixel_sample)             
+  var p_a: vec2f
+  and p_b: vec2f
+  and p_c: vec2f
+  val () = p_a.init (a.x() / a.w(), a.y() / a.w())
+  val () = p_b.init (b.x() / b.w(), b.y() / b.w())
+  val () = p_c.init (c.x() / c.w(), c.y() / c.w())
+//
+  val () = bboxmin.init (
+    min3 (p_a.x(), p_b.x(), p_c.x()),
+    min3 (p_a.y(), p_b.y(), p_c.y())
+  ) (* end of [val] *)
+  val () = bboxmax.init (
+    max3 (p_a.x(), p_b.x(), p_c.x()),
+    max3 (p_a.y(), p_b.y(), p_c.y())
+  ) (* end of [val] *)
+//
+  val xmin = g1ofg0 (g0float2int (bboxmin.x()))
+  val xmax = g1ofg0 (g0float2int (bboxmax.x()))
+  val ymin = g1ofg0 (g0float2int (bboxmin.y()))
+  val ymax = g1ofg0 (g0float2int (bboxmax.y()))
+//
+  val width = sz2i ($PM.pixmap_get_width (zbuffer))
+  val height = sz2i ($PM.pixmap_get_height (zbuffer))
+//
+  val xmin = max (xmin, 0)
+  prval [xmin:int] EQINT () = eqint_make_gint (xmin)
+  val xmax = min (xmax, width-1)
+  prval [xmax:int] EQINT () = eqint_make_gint (xmax)
+  val ymin = max (ymin, 0)
+  prval [ymin:int] EQINT () = eqint_make_gint (ymin)
+  val ymax = min (ymax, height-1)
+  prval [ymax:int] EQINT () = eqint_make_gint (ymax)
+//
+(*
+  val () = println!("x = (", xmin, ", ", xmax, ")")
+  val () = println!("y = (", ymin, ", ", ymax, ")")
+*)
+//
+  prval () = __trustme () where {
+    // we compute xmin via [min], and xmax via [max],
+    // so this holds but is unclear to the typechecker
+    // (to show that it holds we'd have to use indexed
+    // floating-point type and a separate constraint checker)
+    extern praxi __trustme (): [xmin <= xmax; ymin <= ymax] void
+  }
+//
+  var x: int?
+  and y: int?
+  val () =  
+  for* {x:int | x >= xmin; x <= xmax+1} (x: int(x)) => (x := xmin ; x <= xmax; x := x + 1) (
+    for* {y:int | y >= ymin; y <= ymax+1} (y: int(y)) => (y := ymin ; y <= ymax; y := y + 1) (let
+      var P: vec2f
+      val () = P.init (g0int2float (g0ofg1_int x), g0int2float (g0ofg1_int y))
+      var cr: vec3f
+      (*
+      val () = println!("a = ", a, ", b =", b, ", c = ", c)
+      *)
+      val () = barycentric (p_a, p_b, p_c, P, cr)
+      (*
+      val () = println!("barycentric: ", cr)
+      *)
+      val z = a.z() * cr.x() + b.z() * cr.y() + c.z() * cr.z()
+      val w = a.w() * cr.x() + b.w() * cr.y() + c.w() * cr.z()
+      val frag_depth = max(0, min(255, g0float2int (z / w + 0.5f)))
+      val frag_depth = $UN.cast{uint8}(frag_depth)
+    in
+      if cr.x() < 0.0f || cr.y() < 0.0f || cr.z() < 0.0f then ((*println!("discarded: out of screen")*))
+      else if $PM.pixmap_get_at_int (zbuffer, x, y) > frag_depth then ((*println!("discarded: depth")*))
+      else let
+        var color: uint32
+        val preserve = triangle$fragment<env> (env, cr, color)
       in
-        if ~(w0 >= 0.0f && w1 >= 0.0f && w2 >= 0.0f) then () // pixel is outside the triangle
-        else let
-          val inv_area = 1.0f / area
-          val () = w0 := w0 * inv_area
-          val () = w1 := w1 * inv_area
-          val () = w2 := w2 * inv_area
-          val inv_z = v0r.z() * w0 + v1r.z() * w1 + v2r.z() * w2
-          val z = 1.0f / inv_z
-          // Depth-buffer test
-          val rd = rasterize_tri$depth_test (x, y,z)
+        if :(color: uint32?) => preserve then let
+          prval () = opt_unsome {uint32} (color)
         in
-          if ~rd then () // farther away, so occluded
-          else {
-            // divide the point coordinates by the vertex z-coordinate,
-            // then interpolate using barycentric coordinates,
-            // and finally, multiply by sample depth
-            var st : vec2f
-            // we use perspective-correct interpolation, so we need
-            // to multiply the result of this interpolation by z,
-            // the depth of the point of the triangle that the pixel overlaps
-            val () = st.init (
-              z * (w0 * st0.x() + w1 * st1.x() + w2 * st2.x()),
-              z * (w0 * st0.y() + w1 * st1.y() + w2 * st2.y())
-            ) (* end of [val] *)
-                      
-            // checkerboard pattern
-            val p = c where {
-               #define M 10
-               val b0 = $UN.cast{uint} (fmod (M * st.x(), 1.0f) > 0.5f)
-               val b1 = $UN.cast{uint} (fmod (M * st.y(), 1.0f) < 0.5f)
-               val p = $UN.cast{int} (b0 lxor b1)
-               // end of [p]
-               val c = 0.3f * g0int2float (1 - p) + 0.7f * g0int2float p
-               val c = $UN.cast{uint} (c * 255.0f)
-               val c = (0xFFu << 24) lor (c << 16) lor (c << 8) lor c
-               val c = $UN.cast{uint32}(c)
-            } (* end of [val] *)
-            val () = rasterize_tri$fb_write (x, y, p)
-          } (* end of [if] *)
-        end // end of [let]
-      end))
-  end // end of [let]
-end
+          $PM.pixmap_set_at_int (zbuffer, x, y, frag_depth);
+          $PM.pixmap_set_at_int (image, x, y, color)
+        end else let
+          prval () = opt_unnone {uint32} (color) in
+        end // end of [if]
+      end // end of [val]
+    end) (* end of [val] *)
+  ) (* end of [val] *)
 //
-end // end of [rasterize_tri]
-//
+} (* end of [triangle] *)
 
-#define IMAGE_WIDTH 640
-#define IMAGE_HEIGHT 480
- 
-#define NEAR_CLIP_PLANE 1.0f
-#define FAR_CLIP_PLANE 1000.0f
-#define FOCAL_LENGTH 20.0f // mm, was 20
-// 35mm Full Aperture in inches
-#define FILM_APERTURE_WIDTH 0.980f
-#define FILM_APERTURE_HEIGHT 0.735f
+(* ****** ****** *)
+
+typedef gl_state = @{
+  mvp= mat4x4f (* model-view-projection matrix *)
+, viewport= mat4x4f (* viewport matrix *)
+, light_dir= vec3f
+} (* end of [gl_state] *)
+
+(* ****** ****** *)
+
+extern
+fun{env:vt@ype}{v:t@ype}
+shader_vert (state: &gl_state, &(env)? >> env, vert: &v): vec4f
+extern
+fun{env:vt@ype}
+shader_frag (
+  &gl_state
+, &(@[env][3]) >> _
+, bar: &vec3f
+, color: &uint32? >> opt (uint32, b)
+): #[b:bool] bool(b)
+
+(* ****** ****** *)
+// Gouraud shader
+
+abst@ype gouraud_shader = float
+typedef gouraud_vert = @{pos= vec3f, norm= vec3f}
+local
+
+assume gouraud_shader = float
+
+in // in of [local]
+
+implement
+shader_vert<gouraud_shader><gouraud_vert> (state, varying, v) = let
+  var gl_Vertex: vec4f
+  val () = gl_Vertex.init (v.pos.x(), v.pos.y(), v.pos.z(), 1.0f)
+  var gl_Vertex' = state.mvp * gl_Vertex
+  var gl_Vertex'' = state.viewport * gl_Vertex'
+  val () = varying := max (0.0f, dotprod (v.norm, state.light_dir))
+in
+  gl_Vertex''
+end
+
+implement
+shader_frag<gouraud_shader> (
+  state, varying, bar, color
+) = let
+  val intensity = varying.[0] * bar.x() + varying.[1] * bar.y() + varying.[2] * bar.z()
+  val c = $UN.cast{int} (255.0f * intensity)
+  val c = $UN.cast{uint} (c)
+  val c = (0xFFu << 24) lor (c << 16) lor (c << 8) lor c
+  val c = $UN.cast{uint32}(c)
+  val () = color := c
+  val () = color := $UN.cast{uint32} (0xFFFFFFFF)
+  prval () = opt_some {uint32} (color)
+in
+  true
+end // end of [shader_frag]
+
+end // end of [local]
+
+extern
+fun{env:vt@ype}{v:t@ype}
+shader_vert_prf {l_env,l_scrn: addr} (
+  pf_env: !env? @ l_env >> env @ l_env
+, pf_scrn: !vec4f? @ l_scrn >> vec4f @ l_scrn
+| state: &gl_state
+, env: ptr l_env
+, vert: &v
+, scrn: ptr l_scrn
+): void
+
+implement{env}{v}
+shader_vert_prf {l_env,l_scrn} (
+  pf_env, pf_scrn
+| gl_state, p_env, vert, p_scrn
+) = !p_scrn := shader_vert<env><v> (gl_state, !p_env, vert)
+
+
+(* ****** ****** *)
 
 fun
-do_the_job (mesh: &mesh, filename: string): void = let
-  var world2camera: mat4x4f
-  val () = world2camera.init (
-    0.707107f, ~0.331295f, 0.624695f, 0.0f,
-    0.0f, 0.883452f, 0.468521f, 0.0f,
-    ~0.707107f, ~0.331295f, 0.624695f, 0.0f,
-    ~1.63871f, ~5.747777f, ~40.400412f, 1.0f
-  ) (* end of [val] *)
-
-  var camera2world : mat4x4f
-  val-true = invert_mat4x4f_mat4x4f (world2camera, camera2world)
-  prval () = opt_unsome {mat4x4f} (camera2world)
- 
-  // compute screen coordinates
-  var t: float
-  and b: float
-  and l: float
-  and r: float
-
-  val () = 
-    compute_screen_coords (
-      FILM_APERTURE_WIDTH, FILM_APERTURE_HEIGHT,
-      IMAGE_WIDTH, IMAGE_HEIGHT,
-      FRG_OVERSCAN,
-      NEAR_CLIP_PLANE,
-      FOCAL_LENGTH,
-      t, b, l, r
-    )
-  // end of [val]
- 
-  // define the frame-buffer and the depth-buffer. Initialize depth buffer
-  // to far clipping plane.
-  var framebuffer: pixmap (0, 0)
-  val () = $PM.pixmap_new<uint32> (framebuffer, (i2sz)IMAGE_HEIGHT, (i2sz)IMAGE_WIDTH, $UN.castvwtp0{uint32}(0x0))
-  var depthbuffer: $PM.pixmap (float, 0, 0)
-  val () = $PM.pixmap_new<float> (depthbuffer, (i2sz)IMAGE_HEIGHT, (i2sz)IMAGE_WIDTH, FAR_CLIP_PLANE)
-  //
-  val top = t
-  val bottom = b
-  val left = l
-  val right = r
-  val p_world2camera = addr@world2camera
-  prval pf_world2camera = view@world2camera
-  implement
-  rasterize_tri$raster<> (v, r) = {
-    prval (pf_world2camera, fpf_world2camera) = decode($vcopyenv_v(pf_world2camera))
-    val () = convert2raster (v, !p_world2camera, left, right, top, bottom, NEAR_CLIP_PLANE, IMAGE_WIDTH, IMAGE_HEIGHT, r)
-    prval () = fpf_world2camera (pf_world2camera)
-  } (* end of [rasterize_tri$raster] *)
-  prval () = view@world2camera := pf_world2camera
-  implement
-  rasterize_tri$image_width<> () = IMAGE_WIDTH
-  implement
-  rasterize_tri$image_height<> () = IMAGE_HEIGHT
+mesh_rasterize {m,n:int} (
+  gl_state: &gl_state
+, mesh: &mesh
+, framebuffer: &$PM.pixmap (uint32, m, n)
+, depthbuffer: &$PM.pixmap (uint8, m, n)
+): void = let
   //
   val p_framebuffer = addr@(framebuffer)
   prval pf_framebuffer = view@(framebuffer)
   val p_depthbuffer = addr@(depthbuffer)
   prval pf_depthbuffer = view@(depthbuffer)
+  val p_gl_state = addr@(gl_state)
+  prval pf_gl_state = view@(gl_state)
   //
   implement
-  rasterize_tri$depth_test<> (x: int, y: int, z: float): bool = let
-    val x = (g1ofg0)x
-    val y = (g1ofg0)y
-  in
-    if x < 0 then false
-    else if x >= IMAGE_WIDTH then false
-    else if y < 0 then false
-    else if y >= IMAGE_HEIGHT then false
-    else let
-      prval (pf_depthbuffer, fpf_depthbuffer) = decode($vcopyenv_v(pf_depthbuffer))
-      val z1 = $PM.pixmap_get_at_int (!p_depthbuffer, y, x)
-      val res = z < z1
-      val () = if res then $PM.pixmap_set_at_int (!p_depthbuffer, y, x, z)
-      prval () = fpf_depthbuffer (pf_depthbuffer)
-    in
-      res
-    end
-  end // end of [rasterize_tri$depth_test]
-  implement
-  rasterize_tri$fb_write<> (x, y, c) = {
-    prval (pf_framebuffer, fpf_framebuffer) = decode($vcopyenv_v(pf_framebuffer))
-    val () = $PM.pixmap_set_at_int2 (!p_framebuffer, y, x, c)
-    prval () = fpf_framebuffer (pf_framebuffer)
-  } (* end of [rasterize_tri$fb_write] *)
-  //
-  implement(env)
-  $OBJ.mesh_foreach_gface_env$fwork<env> (pb, f, va, vb, vc, na, nb, nc, ta, tb, tc) = {
+  $OBJ.mesh_foreach_gface_env$fwork<gl_state> (gl_state, f, va, vb, vc, na, nb, nc, ta, tb, tc) = {
     //
-    val () = rasterize_tri (va, vb, vc, ta, tb, tc)
+    // TODO: move this out to mesh loading!
+    var ga: gouraud_vert
+    val () = ga.pos := va
+    val () = ga.norm := na
+    var gb: gouraud_vert
+    val () = gb.pos := vb
+    val () = gb.norm := nb
+    var gc: gouraud_vert
+    val () = gc.pos := vc
+    val () = gc.norm := nc
+    //
+    typedef V = gouraud_shader
+    typedef V3 = @[V][3]
+    typedef S = vec4f
+    //
+    var varyings: V3
+    var scrn0: S
+    and scrn1: S
+    and scrn2: S
+    //
+    prval pf_var = view@(varyings)
+    prval [lpvar:addr] EQADDR () = eqaddr_make_ptr (addr@(varyings))
+    var pvar = addr@(varyings)
+    //
+    prval (pf1_at_var, pf1_var) = array_v_uncons {V?} (pf_var)
+    val () = shader_vert_prf<V><gouraud_vert> (pf1_at_var, view@scrn0 | gl_state, pvar, ga, addr@scrn0)
+    //
+    val () = pvar := ptr1_succ<V> (pvar)
+    //
+    prval (pf2_at_var, pf2_var) = array_v_uncons {V?} (pf1_var)
+    val () = shader_vert_prf<V><gouraud_vert> (pf2_at_var, view@scrn1 | gl_state, pvar, ga, addr@scrn1)
+    //
+    val () = pvar := ptr1_succ<V> (pvar)
+    //
+    prval (pf3_at_var, pf3_var) = array_v_uncons {V?} (pf2_var)
+    val () = shader_vert_prf<V><gouraud_vert> (pf3_at_var, view@scrn2 | gl_state, pvar, ga, addr@scrn2)
+    //
+    #define :: array_v_cons
+    //
+    prval pf3_nil_var = array_v_unnil_nil (pf3_var)
+    prval () = view@(varyings) := pf1_at_var :: pf2_at_var :: pf3_at_var :: pf3_nil_var
+    //
+    implement
+    triangle$fragment<V> (env, pos, color) = res where {
+      prval (pf_gls, fpf_gls) = decode($vcopyenv_v(pf_gl_state))
+      val res = shader_frag<V> (!p_gl_state, env, pos, color)
+      prval () = fpf_gls (pf_gls)
+    } (* end of [triangle$fragment] *)
+    //
+    prval (pf_framebuffer, fpf_framebuffer) = decode($vcopyenv_v(pf_framebuffer))
+    prval (pf_depthbuffer, fpf_depthbuffer) = decode($vcopyenv_v(pf_depthbuffer))
+    val () = triangle<V> (varyings, scrn0, scrn1, scrn2, !p_framebuffer, !p_depthbuffer)
+    prval () = fpf_framebuffer (pf_framebuffer)
+    prval () = fpf_depthbuffer (pf_depthbuffer)
     //
   } (* end of [mesh_foreach_gface_env$fwork] *)
 //
-  var env: int = 1
-  val () = $OBJ.mesh_foreach_gface_env<int> (env, mesh)
+  val () = $OBJ.mesh_foreach_gface_env<gl_state> (gl_state, mesh)
 //
   prval () = view@(framebuffer) := pf_framebuffer
   prval () = view@(depthbuffer) := pf_depthbuffer
+  prval () = view@(gl_state) := pf_gl_state
 //
-        
+in
+end // end of [...]
+
+(* ****** ****** *)
+
+fun
+mat4x4f_viewport (x: int, y: int, w: int, h: int): mat4x4f = let
+  var res: mat4x4f
+  val () = res.identity ()
+  val () = res[0,3] := g0int2float (x+w/2)
+  val () = res[1,3] := g0int2float (y+h/2)
+  val () = res[2,3] := 255.0f/2.0f
+  val () = res[0,0] := g0int2float (w/2)
+  val () = res[1,1] := g0int2float (h/2)
+  val () = res[2,2] := 255.0f/2.0f
+in
+  res
+end // end of [mat4x4f_viewport]
+
+#define TEST 0
+
+fun
+do_the_job (mesh: &mesh, filename: string): void = let
+  //
+  #define IMAGE_WIDTH 1024
+  #define IMAGE_HEIGHT 1024
+  //
+  var framebuffer: $PM.pixmap (uint32, 0, 0)
+  val () = $PM.pixmap_new<uint32> (framebuffer, (i2sz)IMAGE_HEIGHT, (i2sz)IMAGE_WIDTH, $UN.castvwtp0{uint32}(0x0))
+  var depthbuffer: $PM.pixmap (uint8, 0, 0)
+  val () = $PM.pixmap_new<uint8> (depthbuffer, (i2sz)IMAGE_HEIGHT, (i2sz)IMAGE_WIDTH, $UN.cast{uint8}(255))
+  //
+  var mins: vec3f
+  and maxs: vec3f
+  val () = $OBJ.mesh_bounds (mesh, mins, maxs)
+  //
+  var env: gl_state
+  var light_dir: vec3f
+  val () = light_dir.init (1.0f, 1.0f, 1.0f)
+  val () = light_dir := normalize_vec3f (light_dir)
+  val () = println!("light_dir = ", light_dir)
+  var eye: vec3f
+  val () = eye.init (0.0f, 0.0f, ~3.0f)
+  var center: vec3f
+  val () = center.init (0.0f, 0.0f, 0.0f)
+  var up: vec3f
+  val () = up.init (0.0f, 1.0f, 0.0f)
+  var lookat: mat4x4f
+#if TEST #then
+  val () = lookat.identity ()
+#else
+  val () = center := (maxs - mins)
+  val () = center := 0.5f * center
+  val () = center := center + mins
+  val () = eye := maxs
+  val () = lookat := mat4x4f_look_at (center, eye, up)
+#endif
+  val () = println!("lookat = ", lookat)
+  val () = env.viewport := mat4x4f_viewport (IMAGE_WIDTH / 8, IMAGE_HEIGHT / 8, IMAGE_WIDTH * 3 / 4, IMAGE_HEIGHT * 3 / 4)
+  val () = println!("viewport = ", env.viewport)
+  var projection = mat4x4f_perspective (
+    90.0f * g0float2float_double_float(M_PI) / 180.0f,
+    g0int2float IMAGE_WIDTH / g0int2float IMAGE_HEIGHT,
+    0.1f, 10.0f)
+  
+  val () = env.mvp := projection * lookat
+  val () = env.light_dir := light_dir
+#if TEST #then
+  val () = {
+    //
+    var v0: vec3f
+    and v1: vec3f
+    and v2: vec3f
+    //
+    val () = v0.init (1.0f, 1.0f, 1.0f)
+    val () = v1.init (1.0f, 0.0f, 1.0f)
+    val () = v2.init (0.0f, 0.0f, 1.0f)
+    //
+    implement
+    triangle$fragment<int> (env, pos, color) = true where {
+      val () = color := $UN.cast{uint32} (0xFFFFFFFF)
+      prval () = opt_some {uint32} (color)
+    } (* end of [triangle$fragment] *)
+    //
+    implement
+    shader_vert<int><vec3f> (state, varying, v) = let
+      var gl_Vertex: vec4f
+      val () = gl_Vertex.init (v.x(), v.y(), v.z(), 1.0f)
+      var gl_Vertex' = state.mvp * gl_Vertex
+      var gl_Vertex'' = state.viewport * gl_Vertex'
+      val () = varying := 0
+    in
+      gl_Vertex''
+    end // end of [shader_vert]
+    //
+    var varyings = @[int][3](0,0,0)
+    var varying0: int
+    and varying1: int
+    and varying2: int
+    var scrn0 = shader_vert<int><vec3f> (env, varying0, v0)
+    var scrn1 = shader_vert<int><vec3f> (env, varying1, v1)
+    var scrn2 = shader_vert<int><vec3f> (env, varying2, v2)
+    val () = triangle<int> (varyings, scrn0, scrn1, scrn2, framebuffer, depthbuffer)
+  }
+#else
+  val () = mesh_rasterize (env, mesh, framebuffer, depthbuffer)
+#endif (* end of [#if] *)
+  //       
   val () = $PM.pixmap_delete (depthbuffer) // TODO: print it?
   var p_framebuf : ptr
   val (pf_framebuf, pf_free_framebuf | ()) = $PM.pixmap_delete_getbuf (framebuffer, p_framebuf)
   val out = fileref_open_exn (filename, file_mode_w)
   val () = $PPM.save_PPM (out, !p_framebuf, (i2sz)IMAGE_HEIGHT, (i2sz)IMAGE_WIDTH)
   val () = matrix_ptr_free {uint32} (pf_framebuf, pf_free_framebuf | p_framebuf)
-
+  //
 in
 end // end of [...]
 

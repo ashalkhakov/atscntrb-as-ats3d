@@ -13,7 +13,9 @@ absvt@ype mesh = @{
   verts= ptr,
   normals= ptr,
   texcoords= ptr,
-  faces= @(ptr, size_t)
+  faces= @(ptr, size_t),
+  mins= vec3f,
+  maxs= vec3f
 } (* end of [mesh] *)
 
 fun{env:vt@ype}
@@ -31,6 +33,9 @@ mesh_foreach_gface_env$fwork (
 ): void
 fun{env:vt@ype}
 mesh_foreach_gface_env (env: &env, m: &mesh): void
+
+fun
+mesh_bounds (&mesh, mins: &vec3f? >> vec3f, maxs: &vec3f? >> vec3f): void
 
 fun
 mesh_delete (&mesh >> mesh?): void
