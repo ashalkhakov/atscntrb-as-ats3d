@@ -164,6 +164,8 @@ triangle {m,n:int} (
 , zbuffer: &$PM.pixmap (uint8, m, n)
 ): void = {
 //
+  val () = println!("a = ", a, ", b = ", b, ", c = ", c)
+//
   var bboxmin: vec2f
   and bboxmax: vec2f
 //
@@ -183,6 +185,9 @@ triangle {m,n:int} (
     max3 (p_a.y(), p_b.y(), p_c.y())
   ) (* end of [val] *)
 //
+  val () = println!("bboxmin = ", bboxmin)
+  val () = println!("bboxmax = ", bboxmax)
+//
   val xmin = g1ofg0 (g0float2int (bboxmin.x()))
   val xmax = g1ofg0 (g0float2int (bboxmax.x()))
   val ymin = g1ofg0 (g0float2int (bboxmin.y()))
@@ -200,10 +205,10 @@ triangle {m,n:int} (
   val ymax = min (ymax, height-1)
   prval [ymax:int] EQINT () = eqint_make_gint (ymax)
 //
-(*
+
   val () = println!("x = (", xmin, ", ", xmax, ")")
   val () = println!("y = (", ymin, ", ", ymax, ")")
-*)
+
 //
   prval () = __trustme () where {
     // we compute xmin via [min], and xmax via [max],
@@ -222,6 +227,7 @@ triangle {m,n:int} (
       val () = P.init (g0int2float (g0ofg1_int x), g0int2float (g0ofg1_int y))
       var cr: vec3f
       (*
+      val () = println!("taking point ", P)
       val () = println!("a = ", a, ", b =", b, ", c = ", c)
       *)
       val () = barycentric (p_a, p_b, p_c, P, cr)
@@ -290,8 +296,11 @@ implement
 shader_vert<gouraud_shader><gouraud_vert> (state, varying, v) = let
   var gl_Vertex: vec4f
   val () = gl_Vertex.init (v.pos.x(), v.pos.y(), v.pos.z(), 1.0f)
+  val () = println!("V = ", gl_Vertex)
   var gl_Vertex' = state.mvp * gl_Vertex
+  val () = println!("MVP * V = ", gl_Vertex')
   var gl_Vertex'' = state.viewport * gl_Vertex'
+  val () = println!("VIEWPORT * MVP * V = ", gl_Vertex'')
   val () = varying := max (0.0f, dotprod (v.norm, state.light_dir))
 in
   gl_Vertex''
@@ -307,7 +316,7 @@ shader_frag<gouraud_shader> (
   val c = (0xFFu << 24) lor (c << 16) lor (c << 8) lor c
   val c = $UN.cast{uint32}(c)
   val () = color := c
-  val () = color := $UN.cast{uint32} (0xFFFFFFFF)
+  //val () = color := $UN.cast{uint32} (0xFFFFFFFF)
   prval () = opt_some {uint32} (color)
 in
   true
@@ -383,12 +392,12 @@ mesh_rasterize {m,n:int} (
     val () = pvar := ptr1_succ<V> (pvar)
     //
     prval (pf2_at_var, pf2_var) = array_v_uncons {V?} (pf1_var)
-    val () = shader_vert_prf<V><gouraud_vert> (pf2_at_var, view@scrn1 | gl_state, pvar, ga, addr@scrn1)
+    val () = shader_vert_prf<V><gouraud_vert> (pf2_at_var, view@scrn1 | gl_state, pvar, gb, addr@scrn1)
     //
     val () = pvar := ptr1_succ<V> (pvar)
     //
     prval (pf3_at_var, pf3_var) = array_v_uncons {V?} (pf2_var)
-    val () = shader_vert_prf<V><gouraud_vert> (pf3_at_var, view@scrn2 | gl_state, pvar, ga, addr@scrn2)
+    val () = shader_vert_prf<V><gouraud_vert> (pf3_at_var, view@scrn2 | gl_state, pvar, gc, addr@scrn2)
     //
     #define :: array_v_cons
     //
@@ -421,6 +430,8 @@ end // end of [...]
 
 (* ****** ****** *)
 
+// a matrix for converting values in NDC (all axes range -1 to 1)
+// to fit into a rendering screen
 fun
 mat4x4f_viewport (x: int, y: int, w: int, h: int): mat4x4f = let
   var res: mat4x4f
@@ -458,29 +469,64 @@ do_the_job (mesh: &mesh, filename: string): void = let
   val () = light_dir := normalize_vec3f (light_dir)
   val () = println!("light_dir = ", light_dir)
   var eye: vec3f
-  val () = eye.init (0.0f, 0.0f, ~3.0f)
+  val () = eye.init (0.0f, 0.0f, 20.0f)
   var center: vec3f
   val () = center.init (0.0f, 0.0f, 0.0f)
   var up: vec3f
   val () = up.init (0.0f, 1.0f, 0.0f)
   var lookat: mat4x4f
 #if TEST #then
-  val () = lookat.identity ()
-#else
-  val () = center := (maxs - mins)
-  val () = center := 0.5f * center
-  val () = center := center + mins
-  val () = eye := maxs
   val () = lookat := mat4x4f_look_at (center, eye, up)
+  //val () = lookat.identity ()
+#else
+  val () = lookat := mat4x4f_look_at (center, eye, up)
+  //val () = lookat.identity ()
 #endif
   val () = println!("lookat = ", lookat)
-  val () = env.viewport := mat4x4f_viewport (IMAGE_WIDTH / 8, IMAGE_HEIGHT / 8, IMAGE_WIDTH * 3 / 4, IMAGE_HEIGHT * 3 / 4)
+  val () = env.viewport := mat4x4f_viewport (
+    0, 0, IMAGE_WIDTH, IMAGE_HEIGHT
+  ) (* end of [val] *)
   val () = println!("viewport = ", env.viewport)
+(*
+  val () = {
+    // this works
+    var p: vec4f
+    val () = p.init (0.0f, 0.0f, 0.0f, 1.0f)
+    val () = print!("P = ", p)
+    var p' = env.viewport * p
+    val () = println!(", viewport*P = ", p')
+
+    var q: vec4f
+    val () = q.init (1.0f, 1.0f, 1.0f, 1.0f)
+    val () = print!("Q = ", q)
+    var q' = env.viewport * q
+    val () = println!(", viewport*Q = ", q')
+  } (* end of [val] *)
+  val () = {
+    // fixed (culprit was with normalize function)
+    val () = println!("origin along z")
+    var at: vec3f
+    and eye: vec3f
+    and up: vec3f
+    val () = at.init (0.0f, 0.0f, 1.0f)
+    val () = eye.init (0.0f, 0.0f, 0.0f)
+    val () = up.init (0.0f, 1.0f, 0.0f)
+    var M1 = mat4x4f_look_at (at, eye, up)
+    var M2: mat4x4f
+    val () = M2.init(1.0f, 0.0f, 0.0f, 0.0f,
+                     0.0f, 1.0f, 0.0f, 0.0f,
+                     0.0f, 0.0f, 1.0f, 0.0f,
+                     0.0f, 0.0f, 0.0f, 1.0f)
+    val () = println!("M1 = ", M1)
+    val () = println!("M2 = ", M2)
+  } (* end of [val] *)
+*)
   var projection = mat4x4f_perspective (
-    90.0f * g0float2float_double_float(M_PI) / 180.0f,
+    30.0f * g0float2float_double_float(M_PI) / 180.0f,
     g0int2float IMAGE_WIDTH / g0int2float IMAGE_HEIGHT,
-    0.1f, 10.0f)
-  
+    0.1f, 100.0f
+  ) (* end of [val] *)
+
   val () = env.mvp := projection * lookat
   val () = env.light_dir := light_dir
 #if TEST #then
@@ -490,13 +536,13 @@ do_the_job (mesh: &mesh, filename: string): void = let
     and v1: vec3f
     and v2: vec3f
     //
-    val () = v0.init (1.0f, 1.0f, 1.0f)
-    val () = v1.init (1.0f, 0.0f, 1.0f)
-    val () = v2.init (0.0f, 0.0f, 1.0f)
+    val () = v0.init (0.5f, 0.5f, 0.5f)
+    val () = v1.init (0.5f, 0.0f, 0.5f)
+    val () = v2.init (0.0f, 0.0f, 0.5f)
     //
     implement
     triangle$fragment<int> (env, pos, color) = true where {
-      val () = color := $UN.cast{uint32} (0xFFFFFFFF)
+      val () = color := $UN.cast{uint32} (0xFF00FFFF)
       prval () = opt_some {uint32} (color)
     } (* end of [triangle$fragment] *)
     //

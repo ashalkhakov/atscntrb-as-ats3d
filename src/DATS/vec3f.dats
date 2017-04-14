@@ -65,37 +65,13 @@ implement
 vec3f_init1 (v, x) = vec3f_init3 (v, x, x, x)
 
 implement
-crossprod_vec3f_vec3f (x, y) = res where {
-//
-fun
-aux (v: &(@[INV(T)][NDIM])? >> _, v1: &vec, v2: &vec): void = {
-//
-prval pf_arr = view@(v)
-var pv = addr@(v)
-//
-prval (pf1_at, pf1_arr) = array_v_uncons {T?} (pf_arr)
-val vx = gsub_val_val<T> (gmul_val_val<T> (v1.V.[1], v2.V.[2]), gmul_val_val<T> (v1.V.[2], v2.V.[1]))
-val () = ptr_set<T> (pf1_at | pv, vx)
-//
-val () = pv := ptr1_succ<T> (pv)
-prval (pf2_at, pf2_arr) = array_v_uncons {T?} (pf1_arr)
-val vy = gsub_val_val<T> (gmul_val_val<T> (v1.V.[2], v2.V.[0]), gmul_val_val<T> (v1.V.[0], v2.V.[2]))
-val () = ptr_set<T> (pf2_at | pv, vy)
-//
-val () = pv := ptr1_succ<T> (pv)
-prval (pf3_at, pf3_arr) = array_v_uncons {T?} (pf2_arr)
-val vz = gsub_val_val<T> (gmul_val_val<T> (v1.V.[0], v2.V.[1]), gmul_val_val<T> (v1.V.[1], v2.V.[0]))
-val () = ptr_set<T> (pf3_at | pv, vz)
-//
-#define :: array_v_cons
-//
-prval pf3_nil = array_v_unnil_nil (pf3_arr)
-prval () = view@(v) := pf1_at :: pf2_at :: pf3_at :: pf3_nil
-//
-} (* end of [aux] *)
+crossprod_vec3f_vec3f (v1, v2) = res where {
 //
 var res: vec
-val () = aux (res.V, x, y)
+val vx = gsub_val_val<T> (gmul_val_val<T> (v1.V.[1], v2.V.[2]), gmul_val_val<T> (v1.V.[2], v2.V.[1]))
+val vy = gsub_val_val<T> (gmul_val_val<T> (v1.V.[2], v2.V.[0]), gmul_val_val<T> (v1.V.[0], v2.V.[2]))
+val vz = gsub_val_val<T> (gmul_val_val<T> (v1.V.[0], v2.V.[1]), gmul_val_val<T> (v1.V.[1], v2.V.[0]))
+val () = res.init (vx, vy, vz)
 //
 } // end of [crossprod_vec3f_vec3f]
 

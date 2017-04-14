@@ -260,7 +260,7 @@ end // end of [length_vec]
 implement
 normalize_vec (x) = let
   val len = length_vec (x)
-  val inv_len = gsub_val_val<T> (gnumber_int<T> (1), len)
+  val inv_len = gdiv_val_val<T> (gnumber_int<T> (1), len)
 in
   mul_T_vec (inv_len, x)
 end
