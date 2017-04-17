@@ -139,12 +139,15 @@ barycentric (A: &vec2f, B: &vec2f, C: &vec2f, P: &vec2f, res: &vec3f? >> vec3f):
   val () = s.init (C.x()-A.x(), B.x()-A.x(), A.x()-P.x())
   var u = crossprod (s, t)
   val () =
-    if :(res: vec3f) => abs(u.z()) > 1e-2f then
+    // backface culling
+    if :(res: vec3f) => u.z() > 1e-2f then
       // don't forget that u[2] is integer. If it is zero then triangle ABC is degenerate
       res.init (1.0f - (u.x () + u.y ()) / u.z (), u.y () / u.z (), u.x () / u.z ())
-    else
+    else (
+      // println!("backface culled");
       // in this case generate negative coordinates, it will be thrown away by the rasterizator
       res.init (~1.0f,1.0f,1.0f)
+    )
   // end of [val]
 } (* end of [barycentric] *)
 
@@ -210,6 +213,7 @@ triangle {m,n:int} (
   val () = println!("y = (", ymin, ", ", ymax, ")")
 *)
 //
+  val () = assertloc (xmin <= xmax && ymin <= ymax)
   prval () = __trustme () where {
     // we compute xmin via [min], and xmax via [max],
     // so this holds but is unclear to the typechecker
