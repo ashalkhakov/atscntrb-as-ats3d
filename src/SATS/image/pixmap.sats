@@ -11,7 +11,7 @@ fun
 pixmap_delete_getbuf {a:t@ype} {m,n:int} (
   &pixmap (a, m, n) >> pixmap (a, 0, 0)?
 , &ptr? >> ptr l
-): #[l:addr] (matrix_v (a, l, m, n), mfree_gc_v (l) | void)
+): #[l:addr] (matrix_v (a, l, n, m), mfree_gc_v (l) | void)
 
 fun{a:t@ype}
 pixmap_set_at_int {m,n:int} (&pixmap (INV(a), m, n), natLt(m), natLt(n), a): void

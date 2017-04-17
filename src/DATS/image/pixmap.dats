@@ -21,17 +21,17 @@ staload "./../../SATS/image/pixmap.sats"
 (* ****** ****** *)
 
 assume pixmap (t:t@ype, m:int, n:int) = [l:addr] (
-  matrix_v (t, l, m, n)
+  matrix_v (t, l, n, m)
 , mfree_gc_v (l)
 | size_t m, size_t n, ptr l
 ) (* end of [pixmap] *)
 
 implement{a}
 pixmap_new {m,n} (res, m, n, fill) = let
-  val (pf_mat, pf_free | p_mat) = matrix_ptr_alloc<a> (m, n)
+  val (pf_mat, pf_free | p_mat) = matrix_ptr_alloc<a> (n, m)
   implement
   matrix_initize$init<a> (i, j, x) = (x := fill)
-  val () = matrix_initize<a> (!p_mat, m, n)
+  val () = matrix_initize<a> (!p_mat, n, m)
   val () = res := (pf_mat, pf_free | m, n, p_mat)
 in
 
@@ -41,14 +41,14 @@ implement{a}
 pixmap_delete {m,n} (pm) = {
   val (pf_mat, pf_free | m, n, p_mat) = pm
   prval [l:addr] EQADDR () = eqaddr_make_ptr (p_mat)
-  prval pf_mn = mul_make {m,n} ()
+  prval pf_mn = mul_make {n,m} ()
   val mn = g1uint_mul (m, n)
   prval () = mul_elim (pf_mn)
   prval pf_arr = matrix2array_v {a} (pf_mat)
   implement
   array_uninitize$clear<a> (i, x) = ()
   val () = array_uninitize<a> (!p_mat, mn)
-  prval pf_mat = array2matrix_v {a?} {l} {m,n} (pf_arr)
+  prval pf_mat = array2matrix_v {a?} {l} {n,m} (pf_arr)
   val () = matrix_ptr_free {a} (pf_mat, pf_free | p_mat)
 } (* end of [pixmap_delete] *)
 
@@ -65,7 +65,7 @@ pixmap_set_at_int (pm, i, j, x) = let
   val (pf_mat, pf_free | m, n, p_mat) = pm
   val i = (i2sz)i
   val j = (i2sz)j
-  val () = matrix_set_at_size<a> (!p_mat, i, n, j, x)
+  val () = matrix_set_at_size<a> (!p_mat, j, m, i, x)
   val () = pm := (pf_mat, pf_free | m, n, p_mat)
 in
 end // end of [pixmap_set_at_int]
@@ -95,7 +95,7 @@ pixmap_get_at_int {m,n} (pm, i, j) = let
   val (pf_mat, pf_free | m, n, p_mat) = pm
   val i = (i2sz)i
   val j = (i2sz)j
-  val res = matrix_get_at_size<a> (!p_mat, i, n, j)
+  val res = matrix_get_at_size<a> (!p_mat, j, m, i)
   val () = pm := (pf_mat, pf_free | m, n, p_mat)
 in
   res
@@ -113,6 +113,6 @@ pixmap_clear {m,n} (pm, fill) = {
     val () = x := fill
   } (* end of [matrix_foreach$fwork] *)
   val (pf_mat, pf_free | m, n, p_mat) = pm
-  val () = matrix_foreach<a> (!p_mat, m, n)
+  val () = matrix_foreach<a> (!p_mat, n, m)
   val () = pm := (pf_mat, pf_free | m, n, p_mat)
 } (* end of [pixmap_clear] *)

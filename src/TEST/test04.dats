@@ -164,7 +164,7 @@ triangle {m,n:int} (
 , zbuffer: &$PM.pixmap (uint8, m, n)
 ): void = {
 //
-  val () = println!("a = ", a, ", b = ", b, ", c = ", c)
+//  val () = println!("a = ", a, ", b = ", b, ", c = ", c)
 //
   var bboxmin: vec2f
   and bboxmax: vec2f
@@ -185,8 +185,8 @@ triangle {m,n:int} (
     max3 (p_a.y(), p_b.y(), p_c.y())
   ) (* end of [val] *)
 //
-  val () = println!("bboxmin = ", bboxmin)
-  val () = println!("bboxmax = ", bboxmax)
+//  val () = println!("bboxmin = ", bboxmin)
+//  val () = println!("bboxmax = ", bboxmax)
 //
   val xmin = g1ofg0 (g0float2int (bboxmin.x()))
   val xmax = g1ofg0 (g0float2int (bboxmax.x()))
@@ -205,10 +205,10 @@ triangle {m,n:int} (
   val ymax = min (ymax, height-1)
   prval [ymax:int] EQINT () = eqint_make_gint (ymax)
 //
-
+(*
   val () = println!("x = (", xmin, ", ", xmax, ")")
   val () = println!("y = (", ymin, ", ", ymax, ")")
-
+*)
 //
   prval () = __trustme () where {
     // we compute xmin via [min], and xmax via [max],
@@ -230,7 +230,7 @@ triangle {m,n:int} (
       val () = println!("taking point ", P)
       val () = println!("a = ", a, ", b =", b, ", c = ", c)
       *)
-      val () = barycentric (p_a, p_b, p_c, P, cr)
+      val () = barycentric (p_a, p_b, p_c, P, cr) // what about backfacing? seems glitchy!
       (*
       val () = println!("barycentric: ", cr)
       *)
@@ -296,12 +296,18 @@ implement
 shader_vert<gouraud_shader><gouraud_vert> (state, varying, v) = let
   var gl_Vertex: vec4f
   val () = gl_Vertex.init (v.pos.x(), v.pos.y(), v.pos.z(), 1.0f)
+  (*
   val () = println!("V = ", gl_Vertex)
+  *)
   var gl_Vertex' = state.mvp * gl_Vertex
+  (*
   val () = println!("MVP * V = ", gl_Vertex')
+  *)
   var gl_Vertex'' = state.viewport * gl_Vertex'
+  (*
   val () = println!("VIEWPORT * MVP * V = ", gl_Vertex'')
-  val () = varying := max (0.0f, dotprod (v.norm, state.light_dir))
+  *)
+  val () = varying := min (1.0f, max (0.0f, dotprod (v.norm, state.light_dir)))
 in
   gl_Vertex''
 end
@@ -310,9 +316,14 @@ implement
 shader_frag<gouraud_shader> (
   state, varying, bar, color
 ) = let
+  // NOTE: something with the fragment shader
   val intensity = varying.[0] * bar.x() + varying.[1] * bar.y() + varying.[2] * bar.z()
+  val intensity = max(0.0f, min(1.0f, intensity))
   val c = $UN.cast{int} (255.0f * intensity)
   val c = $UN.cast{uint} (c)
+  (*
+  val () = println!("intens = ", c)
+  *)
   val c = (0xFFu << 24) lor (c << 16) lor (c << 8) lor c
   val c = $UN.cast{uint32}(c)
   val () = color := c
@@ -446,18 +457,16 @@ in
   res
 end // end of [mat4x4f_viewport]
 
-#define TEST 0
-
 fun
 do_the_job (mesh: &mesh, filename: string): void = let
   //
   #define IMAGE_WIDTH 1024
-  #define IMAGE_HEIGHT 1024
+  #define IMAGE_HEIGHT 768
   //
   var framebuffer: $PM.pixmap (uint32, 0, 0)
-  val () = $PM.pixmap_new<uint32> (framebuffer, (i2sz)IMAGE_HEIGHT, (i2sz)IMAGE_WIDTH, $UN.castvwtp0{uint32}(0x0))
+  val () = $PM.pixmap_new<uint32> (framebuffer, (i2sz)IMAGE_WIDTH, (i2sz)IMAGE_HEIGHT, $UN.castvwtp0{uint32}(0x0))
   var depthbuffer: $PM.pixmap (uint8, 0, 0)
-  val () = $PM.pixmap_new<uint8> (depthbuffer, (i2sz)IMAGE_HEIGHT, (i2sz)IMAGE_WIDTH, $UN.cast{uint8}(255))
+  val () = $PM.pixmap_new<uint8> (depthbuffer, (i2sz)IMAGE_WIDTH, (i2sz)IMAGE_HEIGHT, $UN.cast{uint8}(255))
   //
   var mins: vec3f
   and maxs: vec3f
@@ -475,13 +484,7 @@ do_the_job (mesh: &mesh, filename: string): void = let
   var up: vec3f
   val () = up.init (0.0f, 1.0f, 0.0f)
   var lookat: mat4x4f
-#if TEST #then
   val () = lookat := mat4x4f_look_at (center, eye, up)
-  //val () = lookat.identity ()
-#else
-  val () = lookat := mat4x4f_look_at (center, eye, up)
-  //val () = lookat.identity ()
-#endif
   val () = println!("lookat = ", lookat)
   val () = env.viewport := mat4x4f_viewport (
     0, 0, IMAGE_WIDTH, IMAGE_HEIGHT
@@ -529,47 +532,8 @@ do_the_job (mesh: &mesh, filename: string): void = let
 
   val () = env.mvp := projection * lookat
   val () = env.light_dir := light_dir
-#if TEST #then
-  val () = {
-    //
-    var v0: vec3f
-    and v1: vec3f
-    and v2: vec3f
-    //
-    val () = v0.init (0.5f, 0.5f, 0.5f)
-    val () = v1.init (0.5f, 0.0f, 0.5f)
-    val () = v2.init (0.0f, 0.0f, 0.5f)
-    //
-    implement
-    triangle$fragment<int> (env, pos, color) = true where {
-      val () = color := $UN.cast{uint32} (0xFF00FFFF)
-      prval () = opt_some {uint32} (color)
-    } (* end of [triangle$fragment] *)
-    //
-    implement
-    shader_vert<int><vec3f> (state, varying, v) = let
-      var gl_Vertex: vec4f
-      val () = gl_Vertex.init (v.x(), v.y(), v.z(), 1.0f)
-      var gl_Vertex' = state.mvp * gl_Vertex
-      var gl_Vertex'' = state.viewport * gl_Vertex'
-      val () = varying := 0
-    in
-      gl_Vertex''
-    end // end of [shader_vert]
-    //
-    var varyings = @[int][3](0,0,0)
-    var varying0: int
-    and varying1: int
-    and varying2: int
-    var scrn0 = shader_vert<int><vec3f> (env, varying0, v0)
-    var scrn1 = shader_vert<int><vec3f> (env, varying1, v1)
-    var scrn2 = shader_vert<int><vec3f> (env, varying2, v2)
-    val () = triangle<int> (varyings, scrn0, scrn1, scrn2, framebuffer, depthbuffer)
-  }
-#else
   val () = mesh_rasterize (env, mesh, framebuffer, depthbuffer)
-#endif (* end of [#if] *)
-  //       
+  //
   val () = $PM.pixmap_delete (depthbuffer) // TODO: print it?
   var p_framebuf : ptr
   val (pf_framebuf, pf_free_framebuf | ()) = $PM.pixmap_delete_getbuf (framebuffer, p_framebuf)
