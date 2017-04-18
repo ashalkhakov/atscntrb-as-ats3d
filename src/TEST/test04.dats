@@ -140,7 +140,7 @@ barycentric (A: &vec2f, B: &vec2f, C: &vec2f, P: &vec2f, res: &vec3f? >> vec3f):
   var u = crossprod (s, t)
   val () =
     // backface culling
-    if :(res: vec3f) => u.z() > 1e-2f then
+    if :(res: vec3f) => abs(u.z()) > 1e-2f then
       // don't forget that u[2] is integer. If it is zero then triangle ABC is degenerate
       res.init (1.0f - (u.x () + u.y ()) / u.z (), u.y () / u.z (), u.x () / u.z ())
     else (
@@ -159,12 +159,20 @@ triangle$fragment (
 , &uint32? >> opt (uint32, b)
 ): #[b:bool] bool (b)
 
+fun
+clamp {v:int;a,b:nat | a <= b}
+  (v: int v, a: int a, b: int b)
+  : [r:nat | r >= a; r <= b] int r =
+  if v < a then a
+  else if v > b then b
+  else v
+
 fun{env:vt@ype}
-triangle {m,n:int} (
+triangle {m,n:pos} (
   env: &(@[env][3]) >> _
 , a: &vec4f, b: &vec4f, c: &vec4f
 , image: &$PM.pixmap (uint32, m, n)
-, zbuffer: &$PM.pixmap (uint8, m, n)
+, zbuffer: &$PM.pixmap (float, m, n)
 ): void = {
 //
 //  val () = println!("a = ", a, ", b = ", b, ", c = ", c)
@@ -199,13 +207,17 @@ triangle {m,n:int} (
   val width = sz2i ($PM.pixmap_get_width (zbuffer))
   val height = sz2i ($PM.pixmap_get_height (zbuffer))
 //
-  val xmin = max (xmin, 0)
+  val xmin = clamp (xmin, 0, width-1)
+  //val xmin = max (xmin, 0)
   prval [xmin:int] EQINT () = eqint_make_gint (xmin)
-  val xmax = min (xmax, width-1)
+  //val xmax = min (xmax, width-1)
+  val xmax = clamp (xmax, xmin, width-1)
   prval [xmax:int] EQINT () = eqint_make_gint (xmax)
-  val ymin = max (ymin, 0)
+  //val ymin = max (ymin, 0)
+  val ymin = clamp (ymin, 0, height-1)
   prval [ymin:int] EQINT () = eqint_make_gint (ymin)
-  val ymax = min (ymax, height-1)
+  //val ymax = min (ymax, height-1)
+  val ymax = clamp (ymax, ymin, height-1)
   prval [ymax:int] EQINT () = eqint_make_gint (ymax)
 //
 (*
@@ -240,8 +252,11 @@ triangle {m,n:int} (
       *)
       val z = a.z() * cr.x() + b.z() * cr.y() + c.z() * cr.z()
       val w = a.w() * cr.x() + b.w() * cr.y() + c.w() * cr.z()
-      val frag_depth = max(0, min(255, g0float2int (z / w + 0.5f)))
-      val frag_depth = $UN.cast{uint8}(frag_depth)
+      val frag_depth = z / w
+      //val () = println!("frag depth bef: ", z / w + 0.5f)
+      //val frag_depth = max(0, min(255, g0float2int (255.0f * (z / w + 0.5f))))
+      //val () = println!("frag depth aft: ", frag_depth)
+      //val frag_depth = $UN.cast{uint8}(frag_depth)
     in
       if cr.x() < 0.0f || cr.y() < 0.0f || cr.z() < 0.0f then ((*println!("discarded: out of screen")*))
       else if $PM.pixmap_get_at_int (zbuffer, x, y) > frag_depth then ((*println!("discarded: depth")*))
@@ -360,11 +375,11 @@ shader_vert_prf {l_env,l_scrn} (
 (* ****** ****** *)
 
 fun
-mesh_rasterize {m,n:int} (
+mesh_rasterize {m,n:pos} (
   gl_state: &gl_state
 , mesh: &mesh
 , framebuffer: &$PM.pixmap (uint32, m, n)
-, depthbuffer: &$PM.pixmap (uint8, m, n)
+, depthbuffer: &$PM.pixmap (float, m, n)
 ): void = let
   //
   val p_framebuffer = addr@(framebuffer)
@@ -469,8 +484,8 @@ do_the_job (mesh: &mesh, filename: string): void = let
   //
   var framebuffer: $PM.pixmap (uint32, 0, 0)
   val () = $PM.pixmap_new<uint32> (framebuffer, (i2sz)IMAGE_WIDTH, (i2sz)IMAGE_HEIGHT, $UN.castvwtp0{uint32}(0x0))
-  var depthbuffer: $PM.pixmap (uint8, 0, 0)
-  val () = $PM.pixmap_new<uint8> (depthbuffer, (i2sz)IMAGE_WIDTH, (i2sz)IMAGE_HEIGHT, $UN.cast{uint8}(255))
+  var depthbuffer: $PM.pixmap (float, 0, 0)
+  val () = $PM.pixmap_new<float> (depthbuffer, (i2sz)IMAGE_WIDTH, (i2sz)IMAGE_HEIGHT, $UN.cast{float}(0.0f))
   //
   var mins: vec3f
   and maxs: vec3f
@@ -482,7 +497,7 @@ do_the_job (mesh: &mesh, filename: string): void = let
   val () = light_dir := normalize_vec3f (light_dir)
   val () = println!("light_dir = ", light_dir)
   var eye: vec3f
-  val () = eye.init (0.0f, 0.0f, 20.0f)
+  val () = eye.init (0.0f, 0.0f, (maxs.z()-mins.z()) * 4.0f (*3.0f*))
   var center: vec3f
   val () = center.init (0.0f, 0.0f, 0.0f)
   var up: vec3f
@@ -494,56 +509,35 @@ do_the_job (mesh: &mesh, filename: string): void = let
     0, 0, IMAGE_WIDTH, IMAGE_HEIGHT
   ) (* end of [val] *)
   val () = println!("viewport = ", env.viewport)
-(*
-  val () = {
-    // this works
-    var p: vec4f
-    val () = p.init (0.0f, 0.0f, 0.0f, 1.0f)
-    val () = print!("P = ", p)
-    var p' = env.viewport * p
-    val () = println!(", viewport*P = ", p')
 
-    var q: vec4f
-    val () = q.init (1.0f, 1.0f, 1.0f, 1.0f)
-    val () = print!("Q = ", q)
-    var q' = env.viewport * q
-    val () = println!(", viewport*Q = ", q')
-  } (* end of [val] *)
-  val () = {
-    // fixed (culprit was with normalize function)
-    val () = println!("origin along z")
-    var at: vec3f
-    and eye: vec3f
-    and up: vec3f
-    val () = at.init (0.0f, 0.0f, 1.0f)
-    val () = eye.init (0.0f, 0.0f, 0.0f)
-    val () = up.init (0.0f, 1.0f, 0.0f)
-    var M1 = mat4x4f_look_at (at, eye, up)
-    var M2: mat4x4f
-    val () = M2.init(1.0f, 0.0f, 0.0f, 0.0f,
-                     0.0f, 1.0f, 0.0f, 0.0f,
-                     0.0f, 0.0f, 1.0f, 0.0f,
-                     0.0f, 0.0f, 0.0f, 1.0f)
-    val () = println!("M1 = ", M1)
-    val () = println!("M2 = ", M2)
-  } (* end of [val] *)
-*)
   var projection = mat4x4f_perspective (
     30.0f * g0float2float_double_float(M_PI) / 180.0f,
     g0int2float IMAGE_WIDTH / g0int2float IMAGE_HEIGHT,
-    0.1f, 100.0f
+    1.0f, 100.0f
   ) (* end of [val] *)
 
   val () = env.mvp := projection * lookat
   val () = env.light_dir := light_dir
   val () = mesh_rasterize (env, mesh, framebuffer, depthbuffer)
   //
-  val () = $PM.pixmap_delete (depthbuffer) // TODO: print it?
+  (*
+  var p_depthbuf: ptr
+  val (pf_depthbuf, pf_free_depthbuf | ()) = $PM.pixmap_delete_getbuf (depthbuffer, p_depthbuf)
+  val filename_depth = string_append (filename, ".depth.pgm")
+  val filename_depth = strptr2string filename_depth
+  val out_z = fileref_open_exn (filename_depth, file_mode_w)
+  val () = $PPM.save_PGM (out_z, !p_depthbuf, (i2sz)IMAGE_HEIGHT, (i2sz)IMAGE_WIDTH)
+  val () = matrix_ptr_free {uint8} (pf_depthbuf, pf_free_depthbuf | p_depthbuf)
+  val () = fileref_close (out_z)
+  *)
+  val () = $PM.pixmap_delete (depthbuffer)
+  //
   var p_framebuf : ptr
   val (pf_framebuf, pf_free_framebuf | ()) = $PM.pixmap_delete_getbuf (framebuffer, p_framebuf)
   val out = fileref_open_exn (filename, file_mode_w)
   val () = $PPM.save_PPM (out, !p_framebuf, (i2sz)IMAGE_HEIGHT, (i2sz)IMAGE_WIDTH)
   val () = matrix_ptr_free {uint32} (pf_framebuf, pf_free_framebuf | p_framebuf)
+  val () = fileref_close (out)
   //
 in
 end // end of [...]

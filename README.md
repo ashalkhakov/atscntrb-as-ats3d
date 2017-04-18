@@ -28,8 +28,18 @@ val () = println!("c = ", c)
 
 Simply run `make` in `src/TEST`.
 
+## Some results
+
+Gouraud-shaded, untextured Wavefront OBJ meshes rendered using
+`test04.exe`:
+
+* [doc/cow2.ppm](cow2)
+* [doc/african_head.ppm](african_head)
+
 ## License
 
 Distributed under the 3-clause BSD (see the LICENSE file)
+
+Mesh files are copyright their respective owners.
 
 --Artyom Shalkhakov

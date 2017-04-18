@@ -193,6 +193,16 @@ test04.exe: \
 regress:: test04.exe; ./$<
 cleanall:: ; $(RMF) test04.exe
 
+TEST04_MESH_FILES = \
+tri2d.obj floor.obj african_head.obj
+test04_MESH_PPMS := \
+  $(patsubst %.ppm, %.obj, $(TEST04_MESH_FILES))
+
+%.ppm: %.obj test04.exe
+	./test04.exe $< $@
+regress:: %.ppm
+cleanall:: ; $(RMF) *.ppm
+
 ######
 
 include $(PATSHOME)/share/atsmake-post.mk
