@@ -8,6 +8,9 @@ staload _(*anon*) = "libats/DATS/dynarray.dats"
 staload PM = "./../SATS/image/pixmap.sats"
 staload _ = "./../DATS/image/pixmap.dats"
 
+staload TGA = "./../SATS/image/TGA.sats"
+staload _ = "./../DATS/image/TGA.dats"
+
 staload PPM = "./../SATS/image/PPM.sats"
 
 staload OBJ = "./../SATS/mesh/OBJ.sats"
@@ -25,6 +28,9 @@ staload _ = "./../DATS/mat4x4f.dats"
 staload "libats/libc/SATS/math.sats"
 staload _ = "libats/libc/DATS/math.dats"
 staload _ = "prelude/DATS/float.dats"
+
+staload _ = "prelude/DATS/string.dats"
+staload _ = "prelude/DATS/strptr.dats"
 
 (* ****** ****** *)
 
@@ -354,6 +360,80 @@ end // end of [shader_frag]
 
 end // end of [local]
 
+(* ****** ****** *)
+
+absvtype sampler2D (a:t@ype) = ptr
+extern
+fun
+sampler_new (basename: string, extension: string, res: &ptr? >> opt (sampler2D(uint32), b)): #[b:bool] bool b
+extern
+fun{a:t@ype}
+sampler_delete (sampler2D(a)): void
+extern
+fun{a:t@ype}
+sampler_lookup (!sampler2D(a), a, &vec2f): a
+
+(* ****** ****** *)
+
+abst@ype texture_shader = @{intensity= float, uv= vec2f}
+typedef texture_vert = @{pos= vec3f, norm= vec3f, uv= vec2f}
+
+extern
+fun{} texture$lookup (v: &vec2f): uint32
+
+local
+
+assume texture_shader = @{intensity= float, uv= vec2f}
+
+in // in of [local]
+
+implement
+shader_vert<texture_shader><texture_vert> (state, varying, v) = let
+  var gl_Vertex: vec4f
+  val () = gl_Vertex.init (v.pos.x(), v.pos.y(), v.pos.z(), 1.0f)
+  var gl_Vertex' = state.mvp * gl_Vertex
+  var gl_Vertex'' = state.viewport * gl_Vertex'
+  
+  val () = varying.intensity := min (1.0f, max (0.0f, dotprod (v.norm, state.light_dir)))
+  val () = varying.uv := v.uv  
+in
+  gl_Vertex''
+end // end of [shader_vert]
+
+implement
+shader_frag<texture_shader> (
+  state, varying, bar, color
+) = let
+  // NOTE: something with the fragment shader
+  val intensity = varying.[0].intensity * bar.x() + varying.[1].intensity * bar.y() + varying.[2].intensity * bar.z()
+  val intensity = max(0.0f, min(1.0f, intensity))
+
+  var uv0 = bar.x() * varying.[0].uv
+  var uv1 = bar.y() * varying.[1].uv
+  var uv2 = bar.z() * varying.[2].uv
+  
+  var uv = uv0 + uv1
+  val () = uv := uv + uv2
+
+  // lookup the fragment color & multiply
+  val c0 = $UN.cast{uint} (texture$lookup<> (uv))
+  val r = $UN.cast{uint} (mul_int_float ($UN.cast{int} (g0uint_land (c0, 0xFFu)), intensity))
+  val g = $UN.cast{uint} (mul_int_float ($UN.cast{int} (g0uint_land (c0 >>  8, 0xFFu)), intensity))
+  val b = $UN.cast{uint} (mul_int_float ($UN.cast{int} (g0uint_land (c0 >> 16, 0xFFu)), intensity))
+
+  val c = (0xFFu << 24) lor b lor g lor r
+  val c = $UN.cast{uint32}(c)
+  val () = color := c
+  prval () = opt_some {uint32} (color)
+in
+  true
+end // end of [shader_frag]
+
+end // end of [local]
+
+
+(* ****** ****** *)
+
 extern
 fun{env:vt@ype}{v:t@ype}
 shader_vert_prf {l_env,l_scrn: addr} (
@@ -374,7 +454,11 @@ shader_vert_prf {l_env,l_scrn} (
 
 (* ****** ****** *)
 
-fun
+extern
+fun{v:t@ype}
+vert_unpack (&v? >> v, pos: &vec3f, norm: &vec3f, texcoord: &vec2f): void
+
+fun{s:t@ype}{v:t@ype}
 mesh_rasterize {m,n:pos} (
   gl_state: &gl_state
 , mesh: &mesh
@@ -393,17 +477,14 @@ mesh_rasterize {m,n:pos} (
   $OBJ.mesh_foreach_gface_env$fwork<gl_state> (gl_state, f, va, vb, vc, na, nb, nc, ta, tb, tc) = {
     //
     // TODO: move this out to mesh loading!
-    var ga: gouraud_vert
-    val () = ga.pos := va
-    val () = ga.norm := na
-    var gb: gouraud_vert
-    val () = gb.pos := vb
-    val () = gb.norm := nb
-    var gc: gouraud_vert
-    val () = gc.pos := vc
-    val () = gc.norm := nc
+    var ga: v
+    val () = vert_unpack<v> (ga, va, na, ta)
+    var gb: v
+    val () = vert_unpack<v> (gb, vb, nb, tb)
+    var gc: v
+    val () = vert_unpack<v> (gc, vc, nc, tc)
     //
-    typedef V = gouraud_shader
+    typedef V = s // shader type
     typedef V3 = @[V][3]
     typedef S = vec4f
     //
@@ -417,17 +498,17 @@ mesh_rasterize {m,n:pos} (
     var pvar = addr@(varyings)
     //
     prval (pf1_at_var, pf1_var) = array_v_uncons {V?} (pf_var)
-    val () = shader_vert_prf<V><gouraud_vert> (pf1_at_var, view@scrn0 | gl_state, pvar, ga, addr@scrn0)
+    val () = shader_vert_prf<V><v> (pf1_at_var, view@scrn0 | gl_state, pvar, ga, addr@scrn0)
     //
     val () = pvar := ptr1_succ<V> (pvar)
     //
     prval (pf2_at_var, pf2_var) = array_v_uncons {V?} (pf1_var)
-    val () = shader_vert_prf<V><gouraud_vert> (pf2_at_var, view@scrn1 | gl_state, pvar, gb, addr@scrn1)
+    val () = shader_vert_prf<V><v> (pf2_at_var, view@scrn1 | gl_state, pvar, gb, addr@scrn1)
     //
     val () = pvar := ptr1_succ<V> (pvar)
     //
     prval (pf3_at_var, pf3_var) = array_v_uncons {V?} (pf2_var)
-    val () = shader_vert_prf<V><gouraud_vert> (pf3_at_var, view@scrn2 | gl_state, pvar, gc, addr@scrn2)
+    val () = shader_vert_prf<V><v> (pf3_at_var, view@scrn2 | gl_state, pvar, gc, addr@scrn2)
     //
     #define :: array_v_cons
     //
@@ -518,7 +599,14 @@ do_the_job (mesh: &mesh, filename: string): void = let
 
   val () = env.mvp := projection * lookat
   val () = env.light_dir := light_dir
-  val () = mesh_rasterize (env, mesh, framebuffer, depthbuffer)
+
+  implement
+  vert_unpack<gouraud_vert> (ga, va, na, ta) = {
+    val () = ga.pos := va
+    val () = ga.norm := na
+  } (* end of [vert_unpack] *)
+  
+  val () = mesh_rasterize<gouraud_shader><gouraud_vert> (env, mesh, framebuffer, depthbuffer)
   //
   (*
   var p_depthbuf: ptr
@@ -543,43 +631,134 @@ in
 end // end of [...]
 
 (* ****** ****** *)
+// sampler implementation
+
+fun
+string_replace_extension (base: string, suffix: string): Strptr0 = let
+  val base = g1ofg0 (base)
+  val ix = string_rindex (base, '.')
+in
+  if ix = ~1 then strptr_null ()
+  else let
+    val ix = g1int2uint_ssize_size ix
+    val subs = string_make_substring (base, (i2sz)0, ix)
+    val subs = strnptr2strptr subs
+    val ext = string1_copy ((g1ofg0)suffix)
+    val ext = strnptr2strptr ext
+    val res = strptr_append (subs, ext)
+    val () = strptr_free (subs)
+    val () = strptr_free (ext)
+  in
+    res
+  end
+end // end of [string_replace_extension]
+
+local
+
+vtypedef pixmap1 (a:t@ype) = [m,n:int] $PM.pixmap (a, m, n)
+assume sampler2D (a:t@ype) = [l:addr] (pixmap1 (a) @ l, mfree_gc_v (l) | ptr l)
+
+in // in of [local]
+
+implement
+sampler_new (
+  basename
+, extension
+, res
+) = let
+  val path = string_replace_extension (basename, extension)
+in
+  if strptr_is_null (path) then let
+    val () = strptr_free (path)
+    prval () = opt_none{sampler2D(uint32)} (res)
+  in
+    false
+  end else let
+    val p_path = ptrcast(path)
+    val inp = fileref_open_opt ($UN.cast{string}(p_path), file_mode_r)
+  in
+    case+ inp of
+    | ~None_vt () => let
+        val () = println!("sampler_new: unable to open file at ", path)
+        val () = strptr_free (path)
+        prval () = opt_none{sampler2D(uint32)} (res)
+      in
+        false
+      end // end of [let]
+    | ~Some_vt inp => let
+        val () = strptr_free (path)
+        var w: size_t(0)
+        and h: size_t(0)
+        and p: ptr(null)
+        val (pf | r) = $TGA.load_TGA (inp, w, h, p)
+        val () = fileref_close (inp)
+      in
+        if r then let
+          prval Some_v @(pf_mat, pf_free) = pf
+          val (pf_pm, pf_free_pm | p_pm) = ptr_alloc<$PM.pixmap (uint32, 0, 0)> ()
+          
+          prval () = opt_unsome (w)
+          and () = opt_unsome (h)
+          and () = opt_unsome (p)
+          prval [l_p:addr] EQADDR () = eqaddr_make_ptr (p)
+          prval [w:int] EQINT () = eqint_make_guint (w)
+          prval [h:int] EQINT () = eqint_make_guint (h)
+          prval () = lemma_g1uint_param (w)
+          prval () = lemma_g1uint_param (h)
+
+          val () = assert_errmsg (w > (i2sz)0, "width is 0!")
+          val () = assert_errmsg (h > (i2sz)0, "height is 0!")
+
+          val () = $PM.pixmap_new_matrix<uint32> (pf_mat, pf_free | !p_pm, h, w, p)
+          val () = w := (i2sz)0
+          val () = h := (i2sz)0
+          val () = p := the_null_ptr
+          val () = res := (pf_pm, pf_free_pm | p_pm)
+          prval () = opt_some{sampler2D(uint32)} (res)
+        in
+          true
+        end else let
+          prval None_v () = pf
+          prval () = opt_unnone (w)
+          and () = opt_unnone (h)
+          and () = opt_unnone (p)
+          prval () = opt_none{sampler2D(uint32)} (res)
+          val () = w := (i2sz)0
+          val () = h := (i2sz)0
+          val () = p := the_null_ptr
+        in
+          false
+        end // end of [if]
+      end // end of [let]
+  end // end of [if]
+end // end of [sampler_new]
+
+implement{a}
+sampler_delete (s) = {
+  val (pf_s, pf_free | p_s) = s
+  val () = $PM.pixmap_delete<a> (!p_s)
+  val () = ptr_free (pf_free, pf_s | p_s)
+} (* end of [sampler_delete] *)
+
+implement{a}
+sampler_lookup (s, x, uv) = let
+  val p = s.2
+  val u = g0float2int (uv.x() * g0int2float (g0ofg1 (g1uint2int_size_int ($PM.pixmap_get_width (!p)))))
+  val v = g0float2int (uv.y() * g0int2float (g0ofg1 (g1uint2int_size_int ($PM.pixmap_get_height (!p)))))
+  implement
+  $PM.pixmap_get_at_int2$default<a> () = x
+  val res = $PM.pixmap_get_at_int2<a> (!p, u, v)
+in
+  res
+end // end of [sample]
+
+end // end of [local]
+
+(* ****** ****** *)
 
 implement
 main0 (argc, argv) = let
-  // from object to world to camera space
-  // then from camera space to image/screen space (camera space with persp divide)
-  // from screen space to NDC(normalized device coordinates) with clipping
-  // from NDC to raster space (multiply by pixel width/height; take floor)
-//
-(*
-  var camera2world : mat4x4f
-  val () = camera2world.init( 0.871214f, 0.0f, ~0.490904f, 0.0f, ~0.192902f, 0.919559f, ~0.342346f, 0.0f, 0.451415f, 0.392953f, 0.801132f, 0.0f, 14.777467f, 29.361945f, 27.993464f, 1.0f)
-  var world2camera : mat4x4f
-  val-true = invert_mat4x4f_mat4x4f (camera2world, world2camera)
-  prval () = opt_unsome {mat4x4f} (world2camera)
-    
-  val canvas_width = 2.0f
-  val canvas_height = 2.0f
-  val image_width = 512
-  val image_height = 512
 
-  var pWorld: vec4f
-  val () = pWorld.init (0.0f, 39.034f, 0.0f, 1.0f)
-
-  // The 2D pixel coordinates of pWorld in the image if the point is visible
-  var pRaster: vec2i
-  val () = pRaster.init (0, 0)
-  val () =
-    if computePixelCoordinates (pWorld, world2camera, canvas_width, canvas_height, image_width, image_height, pRaster) then {
-       val () = println!("pixel coordinates: ", pRaster)
-    }
-    else {
-       val () = println!(pWorld, " is not visible")
-    }
-//
-// next: clipping triangles and stuff
-//
-*)
 in
   if argc >= 3 then let
     val inp = fileref_open_exn (argv[1], file_mode_r)
@@ -590,6 +769,25 @@ in
     if :(mesh: $OBJ.mesh?) => res then let
       prval () = opt_unsome (mesh)
       val () = println!("successfully opened the input file")
+      
+      // open the TGA file, obtain the corresponding pixmap...
+      var sampler_diffuse: sampler2D(uint32)
+      val sampler_diffuse_res = sampler_new (argv[1], "_diffuse.tga", sampler_diffuse)
+      val () =
+        if :(sampler_diffuse: sampler2D(uint32)?) => sampler_diffuse_res then let
+          prval () = opt_unsome {sampler2D(uint32)} (sampler_diffuse)
+          val () = println!("initialized diffuse sampler")
+          val () = sampler_delete<uint32> (sampler_diffuse)
+        in
+        end else let
+          prval () = opt_unnone {sampler2D(uint32)} (sampler_diffuse)
+          val () = println!("unable to initialize the diffuse sampler")
+        in
+        end
+      // end of [val]
+
+      // and call "do_the_job" with it
+      // TODO: maybe call another version of do_the_job that does goraud if texture wasn't found?
       
       val () = do_the_job (mesh, argv[2])
       (*

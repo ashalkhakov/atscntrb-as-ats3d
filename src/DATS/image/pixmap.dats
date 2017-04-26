@@ -38,6 +38,11 @@ in
 end // end of [pixmap_new]
 
 implement{a}
+pixmap_new_matrix {m,n} (pf_mat, pf_free | res, m, n, p_mat) = {
+  val () = res := (pf_mat, pf_free | m, n, p_mat)
+} (* end of [pixmap_new_matrix] *)
+
+implement{a}
 pixmap_delete {m,n} (pm) = {
   val (pf_mat, pf_free | m, n, p_mat) = pm
   prval [l:addr] EQADDR () = eqaddr_make_ptr (p_mat)
@@ -100,6 +105,32 @@ pixmap_get_at_int {m,n} (pm, i, j) = let
 in
   res
 end
+
+implement{a}
+pixmap_get_at_int2 {m,n} (pm, i, j) = let
+//
+  val i = (g1ofg0)i
+  val w = pixmap_get_width (pm)
+  prval () = lemma_g1uint_param (w)
+  val w = g1uint2int_size_int (w)
+//
+  val j = (g1ofg0)j
+  val h = pixmap_get_height (pm)
+  prval () = lemma_g1uint_param (h)
+  val h = g1uint2int_size_int (h)
+//
+  macdef DEF = (pixmap_get_at_int2$default<a> ())
+//
+in
+  if i < w then (
+    if j < h then (
+      if i >= 0 then (
+        if j >= 0 then pixmap_get_at_int (pm, i, j)
+        else DEF
+      ) else DEF
+    ) else DEF
+  ) else DEF
+end // end of [pixmap_get_at_int2]
   
 implement{a}
 pixmap_get_width {m,n} (pm) = pm.2
