@@ -33,8 +33,8 @@ Simply run `make` in `src/TEST`.
 Gouraud-shaded, untextured Wavefront OBJ meshes rendered using
 `test04.exe`:
 
-* [doc/cow2.ppm](cow2)
-* [doc/african_head.ppm](african_head)
+* ![cow2](/doc/cow2.ppm?raw=true "cow2")
+* ![african_head](/doc/african_head.ppm?raw=true "african_head")
 
 ## License
 
