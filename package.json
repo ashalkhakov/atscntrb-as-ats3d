@@ -1,0 +1,27 @@
+{
+  "name": "ats3d",
+  "version": "0.0.1",
+  "description": "3D graphics utilities for ATS/Postiats",
+  "main": "N/A",
+  "directories": {
+    "doc": "doc"
+  },
+  "scripts": {
+    "test": "cd src/TEST && make regress"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ashalkhakov/ats3d.git"
+  },
+  "keywords": [
+    "ATS",
+    "graphics",
+    "3d"
+  ],
+  "author": "Artyom Shalkhakov <artyom.shalkhakov@gmail.com>",
+  "license": "BSD-3-Clause",
+  "bugs": {
+    "url": "https://github.com/ashalkhakov/ats3d/issues"
+  },
+  "homepage": "https://github.com/ashalkhakov/ats3d#readme"
+}
