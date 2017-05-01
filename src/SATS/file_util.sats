@@ -1,3 +1,6 @@
+fun
+string_replace_extension (base: string, suffix: string): Strptr0
+
 macdef
 implies (x, y) = (if ,(x) then ,(y) else false)
 

@@ -2,11 +2,36 @@
 
 staload STDIO = "libats/libc/SATS/stdio.sats"
 
+staload _ = "prelude/DATS/string.dats"
+staload _ = "prelude/DATS/strptr.dats"
+
 staload "./../SATS/file_util.sats"
 
 (* ****** ****** *)
 
 #define ATS_DYNLOADFLAG 0
+
+(* ****** ****** *)
+
+implement
+string_replace_extension (base, suffix) = let
+  val base = g1ofg0 (base)
+  val ix = string_rindex (base, '.')
+in
+  if ix = ~1 then strptr_null ()
+  else let
+    val ix = g1int2uint_ssize_size ix
+    val subs = string_make_substring (base, (i2sz)0, ix)
+    val subs = strnptr2strptr subs
+    val ext = string1_copy ((g1ofg0)suffix)
+    val ext = strnptr2strptr ext
+    val res = strptr_append (subs, ext)
+    val () = strptr_free (subs)
+    val () = strptr_free (ext)
+  in
+    res
+  end
+end // end of [string_replace_extension]
 
 (* ****** ****** *)
 

@@ -42,6 +42,13 @@ MYTARGET=test01
 
 ######
 #
+MYCCRULE=MYCCRULE
+
+%_sats.o: %.sats ; \
+  $(PATSCC) $(INCLUDE) $(INCLUDE_ATS) $(CFLAGS) -o $@ -c $<
+%_dats.o: %.dats ; \
+  $(PATSCC) $(INCLUDE) $(INCLUDE_ATS) $(MALLOCFLAG) $(CFLAGS) -o $@ -c $<
+#
 MYPORTDIR=MYPORTDIR
 #
 #MYPORTCPP=MYPORTCPP
@@ -161,6 +168,9 @@ TEST04_SOURCES_SATS = \
   ../SATS/file_util.sats \
   ../SATS/image/TGA.sats \
   ../SATS/image/PPM.sats \
+  ../SATS/raster.sats \
+  ../SATS/sampler.sats \
+  ../SATS/shader_sample.sats \
   ../SATS/vector.sats \
   ../SATS/matrix.sats
 TEST04_SOURCES_DATS = \
@@ -169,6 +179,9 @@ TEST04_SOURCES_DATS = \
   ../DATS/file_util.dats \
   ../DATS/image/TGA.dats \
   ../DATS/image/PPM.dats \
+  ../DATS/raster.dats \
+  ../DATS/sampler.dats \
+  ../DATS/shader_sample.dats \
   ../DATS/vec2i.dats \
   ../DATS/vec3i.dats \
   ../DATS/vec2f.dats \
