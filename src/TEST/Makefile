@@ -23,8 +23,7 @@ PATSCCOMP = $(CC) -D_XOPEN_SOURCE
 
 SOURCES_SATS += \
   ../SATS/vector.sats \
-  ../SATS/matrix.sats \
-  ../SATS/quaternion.sats \
+  ../SATS/matrix.sats
 
 SOURCES_DATS += \
   ../DATS/vec2f.dats \
@@ -33,7 +32,6 @@ SOURCES_DATS += \
   ../DATS/matrix.dats \
   ../DATS/mat3x3f.dats \
   ../DATS/mat4x4f.dats \
-  ../DATS/quaternion.dats \
   test01.dats
 
 ######
@@ -76,7 +74,6 @@ cleanall:: ; $(RMF) test00.exe
 TEST01_SOURCES_SATS = \
   ../SATS/vector.sats \
   ../SATS/matrix.sats \
-  ../SATS/quaternion.sats
 
 TEST01_SOURCES_DATS = \
   ../DATS/vec2f.dats \
@@ -85,7 +82,6 @@ TEST01_SOURCES_DATS = \
   ../DATS/matrix.dats \
   ../DATS/mat3x3f.dats \
   ../DATS/mat4x4f.dats \
-  ../DATS/quaternion.dats \
   test01.dats
 
 test01_C_O := \
@@ -194,7 +190,7 @@ test04.exe: \
   $(test04_SATS_O) \
   $(test04_DATS_O) ; \
   $(PATSCC) $(INCLUDE) $(MALLOCFLAG) $(CFLAGS) -o $@ $^ $(LDFLAGS) $(EXTRAFLAGS)
-regress:: test04.exe; ./$<
+regress:: test04.exe; ./$< data/african_head.obj out.ppm
 cleanall:: ; $(RMF) test04.exe
 
 TEST04_MESH_FILES = \
