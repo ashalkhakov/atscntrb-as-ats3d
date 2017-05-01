@@ -259,3 +259,7 @@ fun
 mat4x4f_view (origin: &vec3f, forward: &vec3f, right: &vec3f, up: &vec3f): mat4x4f
 fun
 mat4x4f_look_at (at: &vec3f, eye: &vec3f, up: &vec3f): mat4x4f
+// a matrix for converting values in NDC (all axes range -1 to 1)
+// to fit into a rendering screen
+fun
+mat4x4f_viewport (x: int, y: int, w: int, h: int): mat4x4f

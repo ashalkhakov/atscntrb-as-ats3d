@@ -398,3 +398,18 @@ in
   res
 end // end of [mat4x4f_look_at]
 
+// a matrix for converting values in NDC (all axes range -1 to 1)
+// to fit into a rendering screen
+implement
+mat4x4f_viewport (x, y, w, h) = let
+  var res: mat4x4f
+  val () = res.identity ()
+  val () = res[0,3] := g0int2float (x+w/2)
+  val () = res[1,3] := g0int2float (y+h/2)
+  val () = res[2,3] := 255.0f/2.0f
+  val () = res[0,0] := g0int2float (w/2)
+  val () = res[1,1] := g0int2float (h/2)
+  val () = res[2,2] := 255.0f/2.0f
+in
+  res
+end // end of [mat4x4f_viewport]

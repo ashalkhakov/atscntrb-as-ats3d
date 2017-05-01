@@ -84,7 +84,7 @@ in
     val x = (hd land 0x80u) > 0u
   in
     if sz > m then let
-      val () = prerrln!("[row_read_rle]: spans rows")
+      val () = prerrln!("[row_read_rle]: spans rows, sz=", sz, ", m=", m)
       prval () = topize {@[a][i]} (!p_bas)
       prval pf_arr = array_v_unsplit {a?} (pf1_arr, pf2_arr)
       prval pf_res = VOR_r (pf_arr)
