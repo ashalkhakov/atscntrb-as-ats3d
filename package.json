@@ -1,6 +1,6 @@
 {
   "name": "atscntrb-as-ats3d",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "3D graphics utilities for ATS/Postiats",
   "main": "N/A",
   "directories": {
