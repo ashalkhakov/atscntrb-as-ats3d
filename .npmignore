@@ -29,5 +29,5 @@
 *_dats.c
 *_sats.c
 
-# test data
-src/TEST/data/
+# include OBJ files in data
+!TEST/data/

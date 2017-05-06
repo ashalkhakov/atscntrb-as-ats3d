@@ -1,6 +1,9 @@
 staload "./vector.sats"
 staload PM = "./image/pixmap.sats"
 
+#define ATS_PACKNAME "ATSCNTRB.as.ats3d"
+#define ATS_EXTERN_PREFIX "atscntrb_as_ats3d_" // prefix for external names
+
 fun
 line {m,n:int} (
   canvas: &$PM.pixmap (uint32, m, n), x0: int, y0: int, x1: int, y1: int, color: uint32

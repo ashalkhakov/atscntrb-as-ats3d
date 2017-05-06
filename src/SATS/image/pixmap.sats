@@ -1,5 +1,10 @@
 (* ****** ****** *)
 
+#define ATS_PACKNAME "ATSCNTRB.as.ats3d"
+#define ATS_EXTERN_PREFIX "atscntrb_as_ats3d_" // prefix for external names
+
+(* ****** ****** *)
+
 absvt@ype pixmap (t:t@ype, m:int, n:int) = (size_t, size_t, ptr)
 
 fun{a:t@ype}

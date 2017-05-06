@@ -4,7 +4,7 @@
 #include
 "share/atspre_staload.hats"
 //
-staload "../SATS/vector.sats"
+staload "./../SATS/vector.sats"
 
 staload _ = "prelude/DATS/gnumber.dats"
 staload _ = "prelude/DATS/SHARE/gnumber_int.dats"

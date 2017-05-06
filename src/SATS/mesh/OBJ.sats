@@ -1,5 +1,12 @@
 staload "./../vector.sats"
 
+(* ****** ****** *)
+
+#define ATS_PACKNAME "ATSCNTRB.as.ats3d"
+#define ATS_EXTERN_PREFIX "atscntrb_as_ats3d_" // prefix for external names
+
+(* ****** ****** *)
+
 absvt@ype arrayptrsz (a:vt@ype) = @(ptr, size_t)
 
 castfn

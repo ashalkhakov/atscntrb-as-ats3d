@@ -1,0 +1,21 @@
+NPM=npm
+
+MYATSCC=$(PATSHOME)/bin/myatscc
+PATSCC=$(PATSHOME)/bin/patscc
+PATSOPT=$(PATSHOME)/bin/patsopt
+PATSLIB=$(PATSHOME)/ccomp/atslib/lib
+
+test01.exe: test01.dats
+	myatscc test01.dats test01.exe
+
+test02.exe: test02.dats
+	myatscc test02.dats test02.exe
+
+test03.exe: test03.dats
+	myatscc test03.dats test03.exe
+
+test04.exe: test04.dats
+	myatscc test04.dats test04.exe
+
+npm-install:: ; \
+$(NPM) install atscntrb-as-ats3d

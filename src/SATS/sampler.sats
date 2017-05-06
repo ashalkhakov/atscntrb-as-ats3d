@@ -1,5 +1,8 @@
 staload "./vector.sats"
 
+#define ATS_PACKNAME "ATSCNTRB.as.ats3d"
+#define ATS_EXTERN_PREFIX "atscntrb_as_ats3d_" // prefix for external names
+
 absvtype sampler2D (a:t@ype) = ptr
 
 fun

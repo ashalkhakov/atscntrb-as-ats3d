@@ -2,10 +2,17 @@ staload "./vector.sats"
 
 %{#
 
-#include "../CATS/vector.cats"
-#include "../CATS/matrix.cats"
+#include "atscntrb-as-ats3d/src/CATS/vector.cats"
+#include "atscntrb-as-ats3d/src/CATS/matrix.cats"
 
 %}
+
+(* ****** ****** *)
+
+#define ATS_PACKNAME "ATSCNTRB.as.ats3d"
+#define ATS_EXTERN_PREFIX "atscntrb_as_ats3d_" // prefix for external names
+
+(* ****** ****** *)
 
 // threshold of determinant when it is considered too small
 // for the matrix inverse to be calculated

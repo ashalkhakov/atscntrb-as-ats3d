@@ -4,6 +4,11 @@ staload "./sampler.sats"
 
 (* ****** ****** *)
 
+#define ATS_PACKNAME "ATSCNTRB.as.ats3d"
+#define ATS_EXTERN_PREFIX "atscntrb_as_ats3d_" // prefix for external names
+
+(* ****** ****** *)
+
 vtypedef gl_state = @{
   mvp= mat4x4f (* model-view-projection matrix *)
 , viewport= mat4x4f (* viewport matrix *)

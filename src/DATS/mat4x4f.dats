@@ -5,8 +5,8 @@
 #include
 "share/atspre_staload.hats"
 //
-staload "../SATS/vector.sats"
-staload "../SATS/matrix.sats"
+staload "./../SATS/vector.sats"
+staload "./../SATS/matrix.sats"
 
 staload _ = "prelude/DATS/gnumber.dats"
 staload _ = "prelude/DATS/SHARE/gnumber_float.dats"

@@ -2,9 +2,14 @@
 
 %{#
 
-#include "../CATS/vector.cats"
+#include "atscntrb-as-ats3d/src/CATS/vector.cats"
 
 %}
+
+(* ****** ****** *)
+
+#define ATS_PACKNAME "ATSCNTRB.as.ats3d"
+#define ATS_EXTERN_PREFIX "atscntrb_as_ats3d_" // prefix for external names
 
 (* ****** ****** *)
 

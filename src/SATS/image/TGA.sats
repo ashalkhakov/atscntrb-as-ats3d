@@ -1,5 +1,10 @@
 (* ****** ****** *)
 
+#define ATS_PACKNAME "ATSCNTRB.as.ats3d"
+#define ATS_EXTERN_PREFIX "atscntrb_as_ats3d_" // prefix for external names
+
+(* ****** ****** *)
+
 fun
 load_TGA {i,j:int;l0:addr} (
   FILEref

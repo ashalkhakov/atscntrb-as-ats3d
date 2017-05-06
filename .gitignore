@@ -28,3 +28,6 @@
 # ats specifics
 *_dats.c
 *_sats.c
+
+# include OBJ files in data
+!TEST/data/*.obj

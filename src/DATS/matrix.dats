@@ -4,7 +4,7 @@
 #include
 "share/atspre_staload.hats"
 
-staload "../SATS/matrix.sats"
+staload "./../SATS/matrix.sats"
 
 implement
 gdet_treshold<float> () = 1e-7f
