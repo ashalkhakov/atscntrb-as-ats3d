@@ -47,6 +47,9 @@ save_PPM {m,n} (fp, mat, m, n) = {
     val () = fprint!(fp, r, " ", g, " ", b)
   }
   val () = fprint_matrix<uint32> (fp, mat, m, n)
+
+  //some bug in mac preview, it requires an empty line in the end
+  val () = fprintln!(fp)
 //
 }
 
