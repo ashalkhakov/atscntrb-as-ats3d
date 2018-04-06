@@ -10,7 +10,8 @@ staload "./sampler.sats"
 (* ****** ****** *)
 
 vtypedef gl_state = @{
-  mvp= mat4x4f (* model-view-projection matrix *)
+  mv = mat4x4f (* model-view matrix*)
+, mvp= mat4x4f (* model-view-projection matrix *)
 , viewport= mat4x4f (* viewport matrix *)
 , light_dir= vec3f
 } (* end of [gl_state] *)

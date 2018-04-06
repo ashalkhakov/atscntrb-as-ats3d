@@ -217,7 +217,14 @@ gl_state_init (mesh: &mesh, width: int, height: int, env: &gl_state? >> gl_state
     1.0f, 100.0f
   ) (* end of [val] *)
 
-  val () = env.mvp := projection * lookat
+  var translation_vec: vec3f
+  val () = translation_vec.init (0.0f, 0.0f, 0.0f)
+  var model_to_world = mat4x4f_of_translation(translation_vec)
+  
+  val () = env.mv := lookat * model_to_world
+  
+  val () = env.mvp := projection * env.mv
+  
   val () = env.light_dir := light_dir
 } (* end of [gl_state_init] *)
 
