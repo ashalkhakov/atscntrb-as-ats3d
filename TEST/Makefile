@@ -24,7 +24,8 @@ PATSCCOMP = $(CC) -D_XOPEN_SOURCE
 
 SOURCES_SATS += \
   ../src/SATS/vector.sats \
-  ../src/SATS/matrix.sats
+  ../src/SATS/matrix.sats \
+  ../src/SATS/quaternion.sats
 
 SOURCES_DATS += \
   ../src/DATS/vec2f.dats \
@@ -33,6 +34,7 @@ SOURCES_DATS += \
   ../src/DATS/matrix.dats \
   ../src/DATS/mat3x3f.dats \
   ../src/DATS/mat4x4f.dats \
+  ../src/DATS/quaternion.dats \
   test01.dats
 
 ######
@@ -177,7 +179,9 @@ TEST04_SOURCES_SATS = \
   ../src/SATS/sampler.sats \
   ../src/SATS/shader_sample.sats \
   ../src/SATS/vector.sats \
-  ../src/SATS/matrix.sats
+  ../src/SATS/matrix.sats \
+  ../src/SATS/quaternion.sats
+
 TEST04_SOURCES_DATS = \
   ../src/DATS/mesh/OBJ.dats \
   ../src/DATS/image/pixmap.dats \
@@ -194,6 +198,7 @@ TEST04_SOURCES_DATS = \
   ../src/DATS/vec4f.dats \
   ../src/DATS/mat3x3f.dats \
   ../src/DATS/mat4x4f.dats \
+  ../src/DATS/quaternion.dats \
   test04.dats
 
 test04_C_O := \
