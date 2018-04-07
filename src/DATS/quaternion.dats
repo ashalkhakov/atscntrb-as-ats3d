@@ -341,10 +341,7 @@ mat4x4f_of_quatf (q) = let
 //
 var res_3x3: mat3x3f
 val() = res_3x3 := mat3x3f_of_quatf(q)
-//print res_3x3
-val () = println! ("res_3x3 = ", res_3x3)
-//
-// val () = println! (res_3x3[0][0])
+
 var res: mat4x4f
 val () = 
   res.init(
@@ -352,22 +349,7 @@ res_3x3[0][0], res_3x3[1][0], res_3x3[2][0], 0.0f,
 res_3x3[0][1], res_3x3[1][1], res_3x3[2][1], 0.0f,
 res_3x3[0][2], res_3x3[1][2], res_3x3[2][2], 0.0f,
           0.0f,          0.0f,          0.0f, 1.0f)
-  // res.init(0.0f)
-// val () = mat4x4f_init16(res, 
-//   res_3x3[0][0], res_3x3[0][1], res_3x3[0][1], 0.0f,
-//   res_3x3[1][0], res_3x3[1][1], res_3x3[1][1], 0.0f,
-//   res_3x3[2][0], res_3x3[2][1], res_3x3[2][1], 0.0f,
-//            0.0f,          0.0f,          0.0f, 1.0f
-//   )
-// val () = mat4x4f_init16(res, 
-//   1.0f, 0.0f, 0.0f, 0.0f,
-//   0.0f, 1.0f, 0.0f, 0.0f,
-//   0.0f, 0.0f, 1.0f, 0.0f,
-//   0.0f, 0.0f, 0.0f, 1.0f
-//   )
-//print res
-// val () = println! ("res = ")
-//
+
 in
   res
 end
