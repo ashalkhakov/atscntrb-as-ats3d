@@ -223,6 +223,34 @@ cleanall:: ; $(RMF) $(test04_MESH_PPMS)
 
 ######
 
+VTERRAIN_SOURCES_SATS = \
+  ../src/SATS/file_util.sats \
+  ../src/SATS/image/TGA.sats \
+  ../src/SATS/image/PPM.sats
+VTERRAIN_SOURCES_DATS = \
+  ../src/DATS/file_util.dats \
+  ../src/DATS/image/TGA.dats \
+  ../src/DATS/image/PPM.dats \
+  vterrain.dats
+
+vterrain_C_O := \
+  $(patsubst %.c, %_c.o, $(SOURCES_C))
+vterrain_SATS_O := \
+  $(patsubst %.sats, %_sats.o, $(VTERRAIN_SOURCES_SATS))
+vterrain_DATS_O := \
+  $(patsubst %.dats, %_dats.o, $(VTERRAIN_SOURCES_DATS))
+all:: vterrain.exe
+vterrain.exe: \
+  $(vterrain_C_O) \
+  $(vterrain_SATS_O) \
+  $(vterrain_DATS_O) ; \
+  $(PATSCC) $(INCLUDE) $(MALLOCFLAG) $(CFLAGS) -o $@ $^ $(LDFLAGS) $(EXTRAFLAGS)
+regress:: vterrain.exe; ./$<
+cleanall:: ; $(RMF) $(vterrain_C_O) $(vterrain_SATS_O) $(vterrain_DATS_O)
+cleanall:: ; $(RMF) vterrain.exe
+
+######
+
 include $(PATSHOME)/share/atsmake-post.mk
 
 ######
