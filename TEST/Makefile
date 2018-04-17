@@ -225,12 +225,17 @@ cleanall:: ; $(RMF) $(test04_MESH_PPMS)
 
 VTERRAIN_SOURCES_SATS = \
   ../src/SATS/file_util.sats \
+  ../src/SATS/image/pixmap.sats \
   ../src/SATS/image/TGA.sats \
-  ../src/SATS/image/PPM.sats
+  ../src/SATS/image/PPM.sats \
+  ../src/SATS/vector.sats
 VTERRAIN_SOURCES_DATS = \
   ../src/DATS/file_util.dats \
+  ../src/DATS/image/pixmap.dats \
   ../src/DATS/image/TGA.dats \
   ../src/DATS/image/PPM.dats \
+  ../src/DATS/vec2i.dats \
+  ../src/DATS/vec2f.dats \
   vterrain.dats
 
 vterrain_C_O := \
