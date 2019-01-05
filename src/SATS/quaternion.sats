@@ -1,6 +1,13 @@
 staload "./vector.sats"
 staload "./matrix.sats"
 
+(* ****** ****** *)
+
+#define ATS_PACKNAME "ATSCNTRB.as.ats3d"
+#define ATS_EXTERN_PREFIX "atscntrb_as_ats3d_" // prefix for external names
+
+(* ****** ****** *)
+
 // quaternion in vector notation
 typedef quat_float_vec3f_t0ype = @{s= float, v= vec3f}
 
@@ -53,10 +60,20 @@ fun
 mat3x3f_of_quatf (&quatf): mat3x3f
 
 fun
+mat4x4f_of_quatf (&quatf): mat4x4f
+
+fun
 axis_angle_of_quatf (&quatf, angle: &float? >> _, axis: &vec3f? >> _): void
 
+fun
+fprint_quatf (FILEref, &quatf): void
+
+fun
+print_quatf (&quatf): void
 // TODO: from axis/angle, from angles
 
 overload invert with invert_quatf
 overload * with mul_quatf_quatf
 overload * with mul_float_quatf
+overload print with print_quatf
+overload fprint with fprint_quatf

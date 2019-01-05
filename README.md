@@ -1,13 +1,14 @@
 # ATS3D
 
 ATS3D is a low-dimensional vector algebra library for
-[ATS2](http://www.ats-lang.org/).
+[ATS2](http://www.ats-lang.org/). With a small rasterizer based on it.
 
 ## Features
 
 * 2- 3- and 4-dimensional vectors
 * 3x3- and 4x4-dimensional matrices
 * function templates for iterating over components of a vector
+* quaternion
 
 ## Usage examples
 

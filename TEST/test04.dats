@@ -22,6 +22,9 @@ staload _ = "./../src/DATS/vec4f.dats"
 staload "./../src/SATS/matrix.sats"
 staload _ = "./../src/DATS/mat4x4f.dats"
 
+staload "./../src/SATS/quaternion.sats"
+staload _ = "./../src/DATS/quaternion.dats"
+
 staload "./../src/SATS/raster.sats"
 staload _ = "./../src/DATS/raster.dats"
 
@@ -217,7 +220,14 @@ gl_state_init (mesh: &mesh, width: int, height: int, env: &gl_state? >> gl_state
     1.0f, 100.0f
   ) (* end of [val] *)
 
-  val () = env.mvp := projection * lookat
+  var q: quatf
+  val() = q.init(0.525322f, 0.0f, 0.8509035f, 0.0f)
+  var model_to_world = mat4x4f_of_quatf(q)
+  
+  val () = env.mv := lookat * model_to_world
+  
+  val () = env.mvp := projection * env.mv
+  
   val () = env.light_dir := light_dir
 } (* end of [gl_state_init] *)
 

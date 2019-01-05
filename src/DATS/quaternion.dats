@@ -31,9 +31,9 @@ staload _ = "prelude/DATS/gorder.dats"
 staload "libats/libc/SATS/math.sats" // NOTE: requires -lm during compilation (for length_vec)
 staload _ = "libats/libc/DATS/math.dats"
 
-staload "../SATS/vector.sats"
-staload "../SATS/matrix.sats"
-staload "../SATS/quaternion.sats"
+staload "./../SATS/vector.sats"
+staload "./../SATS/matrix.sats"
+staload "./../SATS/quaternion.sats"
 
 staload _ = "./vec3f.dats"
 
@@ -337,13 +337,45 @@ end
 (* ****** ****** *)
 
 implement
+mat4x4f_of_quatf (q) = let
+//
+var res_3x3: mat3x3f
+val() = res_3x3 := mat3x3f_of_quatf(q)
+
+var res: mat4x4f
+val () = 
+  res.init(
+res_3x3[0][0], res_3x3[1][0], res_3x3[2][0], 0.0f,
+res_3x3[0][1], res_3x3[1][1], res_3x3[2][1], 0.0f,
+res_3x3[0][2], res_3x3[1][2], res_3x3[2][2], 0.0f,
+          0.0f,          0.0f,          0.0f, 1.0f)
+
+in
+  res
+end
+
+(* ****** ****** *)
+
+implement
 axis_angle_of_quatf (q, angle, axis) = {
 //
 val () = axis := (if gisgtz_val<T> (q.s) then q.v else ~q.v)
-val len = axis.length ()
+val len = length_vec3f(axis)
 val () = axis := grecip_val<T> (len) * axis
 val () = angle := _2 * atan2 (len, if gisgtz_val<T> (q.s) then q.s else neg (q.s))
 //
 } (* end of [axis_angle_of_quatf] *)
 
+(* ****** ****** *)
 
+implement
+fprint_quatf(out, q) = {
+val () = fprint! (out, "( s = ", q.s, ", xyz = ", q.v, " )")
+}
+
+(* ****** ****** *)
+
+implement
+print_quatf (q) = fprint_quatf(stdout_ref, q)
+
+(* ****** ****** *)

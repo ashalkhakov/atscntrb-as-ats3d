@@ -43,7 +43,19 @@ shader_vert<gl_state,gouraud_shader><gouraud_vert> (state, varying, v) = let
   (*
   val () = println!("VIEWPORT * MVP * V = ", gl_Vertex'')
   *)
-  val () = varying := min (1.0f, max (0.0f, dotprod (v.norm, state.light_dir)))
+
+  // val () = varying := min (1.0f, max (0.0f, dotprod (v.norm, state.light_dir)))
+  //apply the transpose of the inverse of mv(not mvp) to normals
+  //any better way?
+  var norm_homo : vec4f
+  val () = norm_homo.init (v.norm.x(), v.norm.y(), v.norm.z(), 0.0f)
+  var mv_inverse_transpose = invert_mat4x4f(state.mv)
+  val () = mv_inverse_transpose := transpose_mat4x4f(mv_inverse_transpose)
+  var norm_homo' = mv_inverse_transpose * norm_homo
+  var norm' : vec3f
+  val () = norm'.init(norm_homo'.x(), norm_homo'.y(), norm_homo'.z())
+  val () = norm' := normalize_vec3f (norm')
+  val () = varying := min (1.0f, max (0.0f, dotprod (norm', state.light_dir)))
 in
   gl_Vertex''
 end
